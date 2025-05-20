@@ -1,0 +1,97 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres-karting
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - karting-network
+
+  # Backend Services (3 instances)
+  backend-1:
+    image: felipec03/karting-backend:latest
+    build: 
+      context: ./backend
+    container_name: backend-1
+    environment:
+      - DB_HOST=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - SERVER_PORT=8090
+      - SPRING_SQL_INIT_MODE=always 
+    depends_on:
+      - postgres
+    networks:
+      - karting-network
+
+  backend-2:
+    image: felipec03/karting-backend:latest
+    container_name: backend-2
+    environment:
+      - DB_HOST=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - SERVER_PORT=8090
+      - SPRING_SQL_INIT_MODE=never 
+    depends_on:
+      - postgres
+    networks:
+      - karting-network
+
+  backend-3:
+    image: felipec03/karting-backend:latest
+    container_name: backend-3
+    environment:
+      - DB_HOST=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - SERVER_PORT=8090
+      - SPRING_SQL_INIT_MODE=never 
+    depends_on:
+      - postgres
+    networks:
+      - karting-network
+
+  # Frontend
+  frontend:
+    image: felipec03/karting-frontend:latest
+    build:
+      context: ./frontend
+    container_name: frontend
+    restart: always
+    environment:
+      VITE_KART_API_URL: /api/karts
+      VITE_USER_API_URL: /api/usuarios
+      VITE_RESERVA_API_URL: /api/reservas
+      VITE_COMPROBANTE_API_URL: /api/comprobantes
+    networks:
+      - karting-network
+
+  # Frontend and API Gateway
+  nginx:
+    image: nginx:stable-alpine
+    container_name: nginx-gateway
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/backend.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+    networks:
+      - karting-network
+
+networks:
+  karting-network:
+    driver: bridge
+
+volumes:
+  postgres-data:

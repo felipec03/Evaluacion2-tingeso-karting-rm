@@ -1,0 +1,254 @@
+.rack-semanal {
+    max-width: 1200px;
+    margin: 0 auto 30px;
+    padding: 20px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .rack-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  
+  .rack-header h2 {
+    font-size: 24px;
+    margin-bottom: 16px;
+    color: #333;
+  }
+  
+  .week-display {
+    font-size: 18px;
+    font-weight: 600;
+    color: #555;
+    margin: 8px 0 16px;
+  }
+  
+  .week-navigation {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .nav-button {
+    padding: 8px 16px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  
+  .nav-button:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .nav-button.current {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+  
+  .rack-container {
+    display: flex;
+    overflow-x: auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    background-color: white;
+  }
+  
+  .time-column {
+    min-width: 80px;
+    border-right: 1px solid #ddd;
+    background-color: #f8f9fa;
+  }
+  
+  .time-slot {
+    height: 60px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  
+  .days-grid {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .day-headers {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+  }
+  
+  .day-header {
+    flex: 1;
+    min-width: 100px;
+    padding: 12px 8px;
+    text-align: center;
+    border-right: 1px solid #ddd;
+    background-color: #f8f9fa;
+  }
+  
+  .day-header.today {
+    background-color: #e3f2fd;
+    border-bottom: 2px solid #2196f3;
+  }
+  
+  .day-name {
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+  }
+  
+  .day-date {
+    font-size: 18px;
+    font-weight: 600;
+  }
+  
+  .time-slots-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .time-row {
+    display: flex;
+    height: 60px;
+  }
+  
+  .slot-cell {
+    flex: 1;
+    min-width: 100px;
+    border-right: 1px solid #e9ecef;
+    border-bottom: 1px solid #e9ecef;
+    padding: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  
+  .slot-cell.closed {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+  }
+  
+  .slot-cell.available {
+    background-color: #ffffff;
+  }
+  
+  .slot-cell.available:hover {
+    background-color: #e6f7ff;
+  }
+  
+  .slot-cell.reserved {
+    background-color: rgba(40, 167, 69, 0.15);
+    cursor: default;
+  }
+  
+  .slot-cell.today {
+    background-color: rgba(33, 150, 243, 0.05);
+  }
+  
+  .closed-text {
+    color: #6c757d;
+    font-size: 12px;
+  }
+  
+  .available-text {
+    color: #28a745;
+    font-size: 12px;
+    opacity: 0.6;
+  }
+  
+  .reservation-card {
+    background-color: #28a745;
+    color: white;
+    width: calc(100% - 8px);
+    padding: 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  
+  .reservation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  }
+  
+  .reservation-email {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .reservation-type {
+    font-size: 11px;
+    opacity: 0.9;
+  }
+  
+  .loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 300px;
+  }
+  
+  .loading-spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #007bff;
+    animation: spin 1s linear infinite;
+  }
+  
+  .error-message {
+    color: #dc3545;
+    text-align: center;
+    padding: 20px;
+    font-size: 18px;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  /* Media queries for responsive design */
+  @media (max-width: 768px) {
+    .rack-container {
+      font-size: 12px;
+    }
+    
+    .time-slot {
+      height: 50px;
+      padding: 4px;
+    }
+    
+    .day-header {
+      min-width: 70px;
+      padding: 8px 4px;
+    }
+    
+    .slot-cell {
+      min-width: 70px;
+    }
+    
+    .week-navigation {
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
