@@ -37,7 +37,7 @@ class ReservaServiceTest {
     void calcularPrecioInicial_Holiday_AppliesSurcharge() {
         ReservaEntity reserva = new ReservaEntity();
         reserva.setTiporeserva(1);
-        reserva.setNumeropersonas(1);
+        reserva.setNumero_personas(1);
         reserva.setInicio_reserva(LocalDateTime.of(2023, 12, 25, 10, 0)); // Christmas
 
         float price = reservaService.calcularPrecioInicial(reserva);
@@ -62,7 +62,7 @@ class ReservaServiceTest {
     @Test
     void calcularDescuentoGrupo_BoundaryValues() {
         ReservaEntity res = new ReservaEntity();
-        res.setNumeropersonas(15);
+        res.setNumero_personas(15);
         res.setPrecioInicial(10000);
 
         float discount = reservaService.calcularDescuentoGrupo(res, 10000);
@@ -72,7 +72,7 @@ class ReservaServiceTest {
     @Test
     void descuentoPorCumpleanos_MultiplePeople() {
         ReservaEntity res = new ReservaEntity();
-        res.setNumeropersonas(6);
+        res.setNumero_personas(6);
         res.setCantidadcumple(2);
         res.setPrecioInicial(15000);
 
