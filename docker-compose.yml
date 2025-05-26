@@ -72,6 +72,8 @@ services:
       VITE_USER_API_URL: /api/usuarios
       VITE_RESERVA_API_URL: /api/reservas
       VITE_COMPROBANTE_API_URL: /api/comprobantes
+      VITE_REPORTE_API_URL: /api/reportes
+
     networks:
       - karting-network
 
