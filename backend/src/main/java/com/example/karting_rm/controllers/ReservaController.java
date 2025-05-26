@@ -91,10 +91,9 @@ public class ReservaController {
     @PostMapping("/calcular-total")
     public ResponseEntity<?> calcularTotal(@RequestBody ReservaEntity reserva) {
         try {
-            // Use a temporary copy of the reservation
             ReservaEntity tempReserva = new ReservaEntity();
             tempReserva.setTiporeserva(reserva.getTiporeserva());
-            tempReserva.setNumero_personas(reserva.getNumero_personas());
+            tempReserva.setNumero_personas(reserva.getNumeroPersonas());
             tempReserva.setInicio_reserva(reserva.getInicio_reserva());
             tempReserva.setFin_reserva(reserva.getFin_reserva());
             tempReserva.setEmailarrendatario(reserva.getEmailarrendatario());

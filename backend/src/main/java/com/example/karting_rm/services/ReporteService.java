@@ -8,11 +8,11 @@ import com.example.karting_rm.repositories.ReservaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class ReporteService {
@@ -23,16 +23,16 @@ public class ReporteService {
     @Autowired
     private ReservaRepository reservaRepository;
 
-    // Define these based on your system's actual values and int mapping for tiporeserva
-    // Example: 1 -> "10 VUELTAS", 2 -> "15 VUELTAS", etc.
-    // This mapping should be robust and cover all tiporeserva values.
+    // Aligning with ReservaService and data.sql tiporeserva values
+    // Assuming: 1 -> Adulto, 2 -> Niño, 3 -> Mixta (as per ReservaService logic)
+    // You might need to adjust these category names based on actual business definitions.
     private static final Map<Integer, String> TIPO_RESERVA_MAP = new HashMap<>() {{
-        put(1, "10 VUELTAS"); // Assuming 1 is for 10 vueltas
-        put(2, "15 VUELTAS"); // Assuming 2 is for 15 vueltas
-        put(3, "20 VUELTAS"); // Assuming 3 is for 20 vueltas
-        put(4, "TIEMPO_MAX_30MIN"); // Assuming 4 is for tiempo max 30 min
-        put(5, "TIEMPO_MAX_60MIN"); // Assuming 5 is for tiempo max 60 min
-        // Add other mappings as per your system's 'tiporeserva' integer codes
+        put(1, "ADULTO");
+        put(2, "NIÑO");
+        put(3, "MIXTA");
+        // If there are other tipoReserva values used, add them here.
+        // The original "10 VUELTAS", "15 VUELTAS" etc. did not seem to align
+        // with the integer tiporeserva values in ReservaEntity/data.sql
     }};
 
     private static final List<String> TIPOS_RESERVA_CATEGORIAS = new ArrayList<>(TIPO_RESERVA_MAP.values());
@@ -40,7 +40,7 @@ public class ReporteService {
 
     private static final List<String> RANGOS_PERSONAS_CATEGORIAS = Arrays.asList(
             "1-3 PERSONAS", "4-6 PERSONAS", "7-9 PERSONAS"
-            // Add more ranges if needed
+            // Add more ranges if needed, e.g., "10+ PERSONAS"
     );
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
 
@@ -57,16 +57,33 @@ public class ReporteService {
             }
             reporteMap.put(tipoCategoria, fila);
         }
+        // Add a default category for reservations whose tiporeserva is not in TIPO_RESERVA_MAP
+        String categoriaDesconocida = "OTRO TIPO RESERVA";
+        if (!reporteMap.containsKey(categoriaDesconocida)) {
+            ReporteFilaDTO filaDesconocida = new ReporteFilaDTO(categoriaDesconocida);
+            for (String mes : mesesEnRango) {
+                filaDesconocida.inicializarMes(mes);
+            }
+            reporteMap.put(categoriaDesconocida, filaDesconocida);
+        }
+
 
         for (ReservaEntity reserva : reservasEnRango) {
             Optional<ComprobanteEntity> optComprobante = comprobanteRepository.findByReservaId(reserva.getId());
             if (optComprobante.isPresent()) {
-                ComprobanteEntity comprobante = optComprobante.get();
-                String tipoReservaDesc = TIPO_RESERVA_MAP.get(reserva.getTiporeserva());
-                String mesReserva = reserva.getFecha().format(MONTH_FORMATTER);
+                String categoriaReserva = TIPO_RESERVA_MAP.get(reserva.getTiporeserva());
+                if (categoriaReserva == null) {
+                    categoriaReserva = categoriaDesconocida; // Assign to default if not mapped
+                }
 
-                if (tipoReservaDesc != null && reporteMap.containsKey(tipoReservaDesc) && mesesEnRango.contains(mesReserva)) {
-                    reporteMap.get(tipoReservaDesc).agregarIngreso(mesReserva, (double) comprobante.getTotal());
+                ReporteFilaDTO fila = reporteMap.get(categoriaReserva);
+                // It's possible fila is null if a new tiporeserva appears that wasn't initialized
+                // For robustness, ensure fila is not null or handle this case
+                if (fila != null) {
+                    String mesReserva = reserva.getFecha().format(MONTH_FORMATTER);
+                    // Ensure totalConIva is not null; provide a default if necessary
+                    BigDecimal monto = BigDecimal.valueOf(reserva.getTotalConIva());
+                    fila.agregarIngreso(mesReserva, monto);
                 }
             }
         }
@@ -86,16 +103,30 @@ public class ReporteService {
             }
             reporteMap.put(rango, fila);
         }
+        // Add a default category for reservations whose numero_personas doesn't fit defined ranges
+        String categoriaOtroRango = "OTRO RANGO PERSONAS";
+        if (!reporteMap.containsKey(categoriaOtroRango)) {
+            ReporteFilaDTO filaOtroRango = new ReporteFilaDTO(categoriaOtroRango);
+            for (String mes : mesesEnRango) {
+                filaOtroRango.inicializarMes(mes);
+            }
+            reporteMap.put(categoriaOtroRango, filaOtroRango);
+        }
 
         for (ReservaEntity reserva : reservasEnRango) {
             Optional<ComprobanteEntity> optComprobante = comprobanteRepository.findByReservaId(reserva.getId());
             if (optComprobante.isPresent()) {
-                ComprobanteEntity comprobante = optComprobante.get();
-                String mesReserva = reserva.getFecha().format(MONTH_FORMATTER);
-                String rangoPersonas = determinarRangoPersonas(reserva.getNumero_personas());
+                String categoriaRangoPersonas = determinarRangoPersonas(reserva.getNumeroPersonas());
+                if (categoriaRangoPersonas == null) {
+                    categoriaRangoPersonas = categoriaOtroRango; // Assign to default if not mapped
+                }
 
-                if (rangoPersonas != null && reporteMap.containsKey(rangoPersonas) && mesesEnRango.contains(mesReserva)) {
-                    reporteMap.get(rangoPersonas).agregarIngreso(mesReserva, (double) comprobante.getTotal());
+                ReporteFilaDTO fila = reporteMap.get(categoriaRangoPersonas);
+                // Ensure fila is not null
+                if (fila != null) {
+                    String mesReserva = reserva.getFecha().format(MONTH_FORMATTER);
+                    BigDecimal monto = BigDecimal.valueOf(reserva.getTotalConIva());
+                    fila.agregarIngreso(mesReserva, monto);
                 }
             }
         }
@@ -122,7 +153,9 @@ public class ReporteService {
         } else if (numeroPersonas >= 7 && numeroPersonas <= 9) {
             return "7-9 PERSONAS";
         }
-        // Consider adding a default or "Other" category if needed
+        // Consider adding "10+ PERSONAS" or returning a specific "Other" category
+        // if you want to capture reservations outside these specific ranges.
+        // Returning null means they won't be categorized unless handled by the caller.
         return null;
     }
 }

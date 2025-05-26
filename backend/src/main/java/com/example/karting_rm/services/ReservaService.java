@@ -42,7 +42,7 @@ public class ReservaService {
 
     public float calcularPrecioInicial(ReservaEntity reserva) {
         int tipoReserva = reserva.getTiporeserva();
-        int cantidadPersonas = reserva.getNumero_personas();
+        int cantidadPersonas = reserva.getNumeroPersonas();
         float precioInicial = switch (tipoReserva) {
             case 1 -> 25000 * cantidadPersonas; // Corregido: Tipo 1 (Adulto) = 25000
             case 2 -> 20000 * cantidadPersonas; // Tipo 2 (Niño) permanece igual
@@ -66,7 +66,7 @@ public class ReservaService {
     }
 
     public float calcularDescuentoGrupo(ReservaEntity reserva, float precioInicial) {
-        int personas = reserva.getNumero_personas();
+        int personas = reserva.getNumeroPersonas();
         if (personas <= 2) return 0;
         else if (personas <= 5) return precioInicial * 0.1f;
         else if (personas <= 10) return precioInicial * 0.2f;
@@ -88,7 +88,7 @@ public class ReservaService {
     }
 
     public float descuentoPorCumpleanos(ReservaEntity reserva, float precioInicial) {
-        int personas = reserva.getNumero_personas();
+        int personas = reserva.getNumeroPersonas();
         int cumpleanios = reserva.getCantidadcumple();
         if (cumpleanios == 0) return 0;
 
@@ -199,11 +199,6 @@ public class ReservaService {
         return reservaRepository.save(reserva);
     }
 
-    // ...existing code...
-
-    /**
-     * Calculates all prices and updates the reservation entity with them
-     */
     public void calcularYActualizarPrecios(ReservaEntity reserva) {
         float precioInicial = calcularPrecioInicial(reserva);
         float descGrupo = calcularDescuentoGrupo(reserva, precioInicial);

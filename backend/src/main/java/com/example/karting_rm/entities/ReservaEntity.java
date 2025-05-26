@@ -1,6 +1,5 @@
 package com.example.karting_rm.entities;
 
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -38,4 +37,8 @@ public class ReservaEntity {
     private float descuentoCumple;
     private float iva;
     private float totalConIva;
+
+    public int getNumeroPersonas() {
+        return  numero_personas;
+    }
 }

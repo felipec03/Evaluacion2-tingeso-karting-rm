@@ -183,7 +183,7 @@ public class ComprobanteService {
 
             addInfoRow(infoTable, "Fecha y Hora:", fechaInicio + " a " + fechaFin);
             addInfoRow(infoTable, "Duración:", reserva.getDuracion() + " horas");
-            addInfoRow(infoTable, "Número de Personas:", String.valueOf(reserva.getNumero_personas()));
+            addInfoRow(infoTable, "Número de Personas:", String.valueOf(reserva.getNumeroPersonas()));
 
             // Tipo de reserva
             String tipoReserva = switch (reserva.getTiporeserva()) {
