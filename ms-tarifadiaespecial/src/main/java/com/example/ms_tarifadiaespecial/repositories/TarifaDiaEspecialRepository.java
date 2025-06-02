@@ -1,4 +1,14 @@
 package com.example.ms_tarifadiaespecial.repositories;
 
-public class TarifaDiaEspecialRepository {
+import com.example.ms_tarifadiaespecial.entities.TarifaDiaEspecialEntity;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+@Repository
+public interface TarifaDiaEspecialRepository extends JpaRepository<TarifaDiaEspecialEntity, Long> {
+    Optional<TarifaDiaEspecialEntity> findByFecha(LocalDate fecha);
+    boolean existsByFecha(LocalDate fecha);
 }
