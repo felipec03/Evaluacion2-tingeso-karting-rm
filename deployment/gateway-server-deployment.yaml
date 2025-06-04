@@ -1,68 +1,41 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gateway-service
+  name: gateway-server-deployment
+  labels:
+    app: gateway-server
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      app: gateway-service
+      app: gateway-server
+  replicas: 1
   template:
     metadata:
       labels:
-        app: gateway-service
+        app: gateway-server
     spec:
       containers:
-        - name: gateway-service
-          image: ${ACR_NAME}.azurecr.io/gateway-service:latest
+        - name: gateway-server
+          image: clustertingesoregistry.azurecr.io/gateway-server:latest
           ports:
-            - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 60
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /actuator/health
-              port: 8080
-            initialDelaySeconds: 120
-            periodSeconds: 15
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "200m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
+            - containerPort: 8085
+          env:
+            - name: SPRING_CONFIG_SERVER_URI
+              value: "http://config-server-service:8888"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka-server-service:8761/eureka/"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: gateway-service
+  name: gateway-server-service
+  labels:
+    app: gateway-server
 spec:
   selector:
-    app: gateway-service
+    app: gateway-server
   ports:
-    - port: 80
-      targetPort: 8080
-  type: ClusterIP
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: gateway-ingress
-  annotations:
-    kubernetes.io/ingress.class: azure/application-gateway
-spec:
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: gateway-service
-                port:
-                  number: 80
+    - protocol: TCP
+      port: 80
+      targetPort: 8085
+  type: LoadBalancer

@@ -23,7 +23,7 @@ COPY --from=builder /app/target/*.jar app.jar
 
 USER spring:spring
 
-EXPOSE 8080
+EXPOSE 8888
 
 ENTRYPOINT ["java", \
     "-XX:+UseContainerSupport", \

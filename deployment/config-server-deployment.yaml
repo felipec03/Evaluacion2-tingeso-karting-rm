@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server-deployment
+  labels:
+    app: config-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-server
+  template:
+    metadata:
+      labels:
+        app: config-server
+    spec:
+      containers:
+      - name: config-server
+        image: clustertingesoregistry.azurecr.io/config-server:latest
+        ports:
+          - containerPort: 8888
+        env:
+            - name: SPRING_CLOUD_CONFIG_SERVER_GIT_URI
+              value: "https://github.com/felipec03/Evaluacion2-tingeso-karting-rm"
+            - name: SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL
+              value: "main"
+            - name: SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCH_PATHS
+              value: "config-data"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server-service
+  labels:
+    app: config-server
+spec:
+  selector:
+    app: config-server
+  ports:
+    - protocol: TCP
+      port: 8888 # Port the service will be available on within the cluster
+      targetPort: 8888 # Port the container is listening on
+  type: ClusterIP # Internal service

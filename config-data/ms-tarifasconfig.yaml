@@ -1,48 +1,28 @@
-# Microservice Configuration: ms-tarifasconfig
 server:
   port: 8091
+
 spring:
   application:
     name: ms-tarifasconfig
-  # Database Configuration
-  # Use environment variables for sensitive data and host information
   datasource:
-    url: jdbc:postgresql://${DB_HOST_TARIFAS:localhost}:5432/${DB_NAME_TARIFAS:tarifas_db}
-    username: ${DB_USERNAME_TARIFAS:postgres}
-    password: ${DB_PASSWORD_TARIFAS:postgres}
+    url: jdbc:postgresql://postgres:5432/tarifasdb
+    username: postgres
+    password: postgres
     driver-class-name: org.postgresql.Driver
-  # JPA/Hibernate Configuration
-  # create-drop: drops the schema at the end of the session (useful for dev/test)
-  # validate: validates the schema, makes no changes to the database.
-  # update: updates the schema.
-  # create: creates the schema, destroying previous data.
-  # none: does nothing.
   jpa:
     hibernate:
-      ddl-auto: create-drop
-    show-sql: true
+      ddl-auto: update
     properties:
       hibernate:
-        format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
-    # Defer datasource initialization to allow JPA to create the schema first
-    defer-datasource-initialization: true
-  # Initialize the database with schema and data if data.sql is present
-  sql:
-    init:
-      mode: always
-# Logging
-logging:
-  level:
-    org:
-      hibernate:
-        SQL: DEBUG
-        type:
-          descriptor:
-            sql:
-              BasicBinder: TRACE
-# Eureka Client Configuration
+        format_sql: true
+    show-sql: true
+
 eureka:
   client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+  instance:
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}

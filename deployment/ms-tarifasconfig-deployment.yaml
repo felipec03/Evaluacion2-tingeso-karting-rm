@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-tarifasconfig-deployment
+  labels:
+    app: ms-tarifasconfig
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-tarifasconfig
+  template:
+    metadata:
+      labels:
+        app: ms-tarifasconfig
+    spec:
+      containers:
+      - name: ms-tarifasconfig
+        image: clustertingesoregistry.azurecr.io/ms-tarifasconfig:latest # Replace with your ACR image
+        ports:
+        - containerPort: 8091 # This should match the port configured by the Config Server
+        env:
+        - name: SPRING_CONFIG_IMPORT
+          value: "configserver:http://config-server-service:8888"
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server-service:8761/eureka/"
+        # Database environment variables, overriding or providing for what's in config-server
+        # These are placeholders; actual values for host/name might come from config-server
+        # or be set here if they differ in K8s.
+        # Sensitive data (username/password) is from secrets.
+        - name: DB_HOST_TARIFAS # Example: your-azure-db-server.postgres.database.azure.com
+          value: "your_azure_postgresql_host_or_k8s_service_name"
+        - name: DB_NAME_TARIFAS
+          value: "tarifas_db" # As in your ms-tarifasconfig.yaml
+        - name: DB_USERNAME_TARIFAS
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret # Your K8s secret for PostgreSQL credentials
+              key: username
+        - name: DB_PASSWORD_TARIFAS
+          valueFrom:
+            secretKeyRef:
+              name: postgresql-secret # Your K8s secret for PostgreSQL credentials
+              key: password
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8091
+          initialDelaySeconds: 80 # Allow time for DB connection and config fetching
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8091
+          initialDelaySeconds: 40
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-tarifasconfig-service
+  labels:
+    app: ms-tarifasconfig
+spec:
+  selector:
+    app: ms-tarifasconfig
+  ports:
+    - protocol: TCP
+      port: 8091
+      targetPort: 8091
+  type: ClusterIP # Internal service, accessed via gateway

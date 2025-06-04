@@ -8,6 +8,6 @@ spring:
     config:
       server:
         git:
-          uri: https://github.com/felipec03/Evaluacion2-tingeso-karting-rm  # Replace with your Git repo or use file:///path/to/local/repo
-          default-label: main  # Or master, depending on your branch name
-          search-paths: '*'  # Search all subdirectories
+          uri: https://github.com/felipec03/Evaluacion2-tingeso-karting-rm
+          default-label: main
+          search-paths: config-data
