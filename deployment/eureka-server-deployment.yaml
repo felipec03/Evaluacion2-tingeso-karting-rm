@@ -3,69 +3,34 @@ kind: Deployment
 metadata:
   name: eureka-server-deployment
   labels:
-    app: eureka-server
+    app: eureka-server-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: eureka-server
+      app: eureka-server-deployment
   template:
     metadata:
       labels:
-        app: eureka-server
+        app: eureka-server-deployment
     spec:
       containers:
       - name: eureka-server
         image: felipec03/eureka-server:latest
-        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8761
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 8761
-          initialDelaySeconds: 180  # Increased from 70
-          periodSeconds: 30         # Increased from 15
-          timeoutSeconds: 5         # Increased from 1
-        readinessProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 8761
-          initialDelaySeconds: 150  # Increased from 40
-          periodSeconds: 20         # Increased from 10
-          timeoutSeconds: 5         # Increased from 1
-        env:
-        - name: SPRING_CLOUD_CONFIG_ENABLED
-          value: "false"
-        - name: EUREKA_INSTANCE_HOSTNAME
-          value: "eureka-server-service"
-        - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
-          value: "false"
-        - name: EUREKA_CLIENT_FETCH_REGISTRY
-          value: "false"
-        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-          value: "http://eureka-server-service:8761/eureka/"
-        - name: JAVA_OPTS
-          value: "-Xmx512m -Xms256m"
+          - containerPort: 8761
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: eureka-server-service
   labels:
-    app: eureka-server
+    app: eureka-server-service
 spec:
   selector:
-    app: eureka-server
+    app: eureka-server-deployment
   ports:
     - protocol: TCP
       port: 8761
       targetPort: 8761
-  type: ClusterIP
+  type: LoadBalancer

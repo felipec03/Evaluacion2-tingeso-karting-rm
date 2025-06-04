@@ -1,26 +1,23 @@
 server:
   port: 8085
 
-spring:
-  application:
-    name: gateway-server
-  cloud:
-    gateway:
-      discovery:
-        locator:
-          enabled: true
-      routes:
-        - id: ms-tarifasconfig
-          uri: lb://ms-tarifasconfig
-          predicates:
-            - Path=/api/tarifas/**, /api/configuracion/**
-
 eureka:
   client:
     fetch-registry: true
     register-with-eureka: true
     service-url:
       defaultZone: http://eureka-server-service:8761/eureka/
-  instance:
-    preferIpAddress: true
-    hostname: gateway-server-service
+
+spring:
+  cloud:
+    gateway:
+      server:
+        gateway:
+          discovery:
+            locator:
+              enabled: true
+          routes:
+            - id: ms-tarifasconfig
+              uri: lb://ms-tarifasconfig
+              predicates:
+                - Path=/api/tarifas/**, /api/configuracion/**

@@ -21,29 +21,21 @@ spec:
         ports:
         - containerPort: 8091
         env:
-        - name: SPRING_CONFIG_IMPORT
-          value: "configserver:http://config-server-service:8888"
-        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-          value: "http://eureka-server-service:8761/eureka/"
-        - name: DB_HOST_TARIFAS
-          value: "postgres"
-        - name: DB_NAME_TARIFAS
-          value: "tarifas_db"
-        - name: DB_USERNAME_TARIFAS
+        - name: SPRING_DATASOURCE_URL
           valueFrom:
-            secretKeyRef:
-              name: postgresql-secret
-              key: username
-        - name: DB_PASSWORD_TARIFAS
+            configMapKeyRef:
+              name: app-configmap
+              key: SPRING_DATASOURCE_URL_MS1
+        - name: SPRING_DATASOURCE_USERNAME
           valueFrom:
-            secretKeyRef:
-              name: postgresql-secret
-              key: password
+            configMapKeyRef:
+              name: app-configmap
+              key: SPRING_DATASOURCE_USERNAME
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ms-tarifasconfig-service
+  name: ms-tarifasconfig
   labels:
     app: ms-tarifasconfig
 spec:
@@ -53,4 +45,4 @@ spec:
     - protocol: TCP
       port: 8091
       targetPort: 8091
-  type: ClusterIP
+  type: LoadBalancer

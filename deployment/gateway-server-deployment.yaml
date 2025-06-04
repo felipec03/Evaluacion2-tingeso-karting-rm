@@ -3,42 +3,34 @@ kind: Deployment
 metadata:
   name: gateway-server-deployment
   labels:
-    app: gateway-server
+    app: gateway-server-deployment
 spec:
   selector:
     matchLabels:
-      app: gateway-server
+      app: gateway-server-deployment
   replicas: 1
   template:
     metadata:
       labels:
-        app: gateway-server
+        app: gateway-server-deployment
     spec:
       containers:
         - name: gateway-server
           image: felipec03/gateway-server:latest
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
-          env:
-            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
-              value: "http://eureka-server-service:8761/eureka/"
-            - name: EUREKA_INSTANCE_PREFERIPADDRESS
-              value: "true"
-            - name: EUREKA_INSTANCE_HOSTNAME
-              value: "gateway-server-service"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: gateway-server-service
   labels:
-    app: gateway-server
+    app: gateway-server-service
 spec:
   selector:
-    app: gateway-server
+    app: gateway-server-deployment
   ports:
     - protocol: TCP
-      port: 80
+      port: 8085
       targetPort: 8085
-  type: NodePort # Changed from LoadBalancer for Minikube
+  type: LoadBalancer
