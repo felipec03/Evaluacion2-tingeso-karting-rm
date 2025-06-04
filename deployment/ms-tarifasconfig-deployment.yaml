@@ -21,6 +21,8 @@ spec:
         ports:
         - containerPort: 8091
         env:
+        - name: SPRING_CONFIG_IMPORT
+          value: "configserver:http://config-server-service:8888"
         - name: SPRING_DATASOURCE_URL
           valueFrom:
             configMapKeyRef:
@@ -31,6 +33,8 @@ spec:
             configMapKeyRef:
               name: app-configmap
               key: SPRING_DATASOURCE_USERNAME
+        - name: SPRING_DATASOURCE_PASSWORD
+          value: "postgres"
 ---
 apiVersion: v1
 kind: Service
