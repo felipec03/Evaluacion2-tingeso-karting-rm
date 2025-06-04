@@ -20,8 +20,8 @@ spec:
           ports:
             - containerPort: 8085
           env:
-            - name: SPRING_CONFIG_SERVER_URI
-              value: "http://config-server-service:8888"
+            - name: SPRING_CONFIG_IMPORT
+              value: "optional:configserver:http://config-server-service:8888"
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: "http://eureka-server-service:8761/eureka/"
 ---
