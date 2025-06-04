@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: config-server
-        image: clustertingesoregistry.azurecr.io/config-server:latest
+        image: felipec03/config-server:latest
+        imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8888
         env:
@@ -38,6 +39,6 @@ spec:
     app: config-server
   ports:
     - protocol: TCP
-      port: 8888 # Port the service will be available on within the cluster
-      targetPort: 8888 # Port the container is listening on
-  type: ClusterIP # Internal service
+      port: 8888
+      targetPort: 8888
+  type: ClusterIP

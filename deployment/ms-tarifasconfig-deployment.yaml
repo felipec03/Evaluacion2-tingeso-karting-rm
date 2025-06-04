@@ -16,31 +16,28 @@ spec:
     spec:
       containers:
       - name: ms-tarifasconfig
-        image: clustertingesoregistry.azurecr.io/ms-tarifasconfig:latest # Replace with your ACR image
+        image: felipec03/ms-tarifasconfig:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8091 # This should match the port configured by the Config Server
+        - containerPort: 8091
         env:
         - name: SPRING_CONFIG_IMPORT
           value: "configserver:http://config-server-service:8888"
         - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
           value: "http://eureka-server-service:8761/eureka/"
-        # Database environment variables, overriding or providing for what's in config-server
-        # These are placeholders; actual values for host/name might come from config-server
-        # or be set here if they differ in K8s.
-        # Sensitive data (username/password) is from secrets.
-        - name: DB_HOST_TARIFAS # Example: your-azure-db-server.postgres.database.azure.com
+        - name: DB_HOST_TARIFAS
           value: "postgres"
         - name: DB_NAME_TARIFAS
-          value: "tarifas_db" # As in your ms-tarifasconfig.yaml
+          value: "tarifas_db"
         - name: DB_USERNAME_TARIFAS
           valueFrom:
             secretKeyRef:
-              name: postgresql-secret # Your K8s secret for PostgreSQL credentials
+              name: postgresql-secret
               key: username
         - name: DB_PASSWORD_TARIFAS
           valueFrom:
             secretKeyRef:
-              name: postgresql-secret # Your K8s secret for PostgreSQL credentials
+              name: postgresql-secret
               key: password
 ---
 apiVersion: v1
@@ -56,4 +53,4 @@ spec:
     - protocol: TCP
       port: 8091
       targetPort: 8091
-  type: ClusterIP # Internal service, accessed via gateway
+  type: ClusterIP

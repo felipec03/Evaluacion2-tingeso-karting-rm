@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
         - name: gateway-server
-          image: clustertingesoregistry.azurecr.io/gateway-server:latest
+          image: felipec03/gateway-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8085
           env:
@@ -40,4 +41,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8085
-  type: LoadBalancer
+  type: NodePort # Changed from LoadBalancer for Minikube
