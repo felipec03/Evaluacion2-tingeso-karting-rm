@@ -24,6 +24,8 @@ spec:
               value: "optional:configserver:http://config-server-service:8888"
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: "http://eureka-server-service:8761/eureka/"
+            - name: SPRING_CLOUD_CONFIG_ENABLED
+              value: "false"  # This will disable config server for this instance
 ---
 apiVersion: v1
 kind: Service
