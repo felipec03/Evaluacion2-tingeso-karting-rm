@@ -14,7 +14,6 @@ spring:
           uri: lb://ms-tarifasconfig
           predicates:
             - Path=/api/tarifas/**, /api/configuracion/**
-        # Add routes for your other microservices here
 
 eureka:
   client:
