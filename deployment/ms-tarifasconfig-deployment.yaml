@@ -29,7 +29,7 @@ spec:
         # or be set here if they differ in K8s.
         # Sensitive data (username/password) is from secrets.
         - name: DB_HOST_TARIFAS # Example: your-azure-db-server.postgres.database.azure.com
-          value: "your_azure_postgresql_host_or_k8s_service_name"
+          value: "postgres"
         - name: DB_NAME_TARIFAS
           value: "tarifas_db" # As in your ms-tarifasconfig.yaml
         - name: DB_USERNAME_TARIFAS
