@@ -5,9 +5,9 @@ spring:
   application:
     name: ms-tarifasconfig
   datasource:
-    url: jdbc:postgresql://postgres:5432/tarifasdb
+    url: jdbc:postgresql://tingeso-entrega2.postgres.database.azure.com:5432/tarifasdb?sslmode=require
     username: postgres
-    password: postgres
+    password: Uggm9966.
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
