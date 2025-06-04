@@ -42,18 +42,6 @@ spec:
             secretKeyRef:
               name: postgresql-secret # Your K8s secret for PostgreSQL credentials
               key: password
-        livenessProbe:
-          httpGet:
-            path: /actuator/health/liveness
-            port: 8091
-          initialDelaySeconds: 80 # Allow time for DB connection and config fetching
-          periodSeconds: 15
-        readinessProbe:
-          httpGet:
-            path: /actuator/health/readiness
-            port: 8091
-          initialDelaySeconds: 40
-          periodSeconds: 10
 ---
 apiVersion: v1
 kind: Service
