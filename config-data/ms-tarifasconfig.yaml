@@ -20,15 +20,10 @@ spring:
 
 eureka:
   instance:
-    preferIpAddress: true
+    prefer-ip-address: true
     instanceId: ${spring.application.name}:${spring.application.instance_id:${random.value}}
   client:
-    fetchRegistry: true
-    registerWithEureka: true
-    serviceUrl:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
       defaultZone: http://eureka-server-service:8761/eureka/
-
-logging:
-  level:
-    com.netflix.discovery: DEBUG
-    org.springframework.cloud.netflix.eureka: DEBUG
