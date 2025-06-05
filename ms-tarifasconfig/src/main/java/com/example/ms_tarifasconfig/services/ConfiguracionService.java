@@ -38,7 +38,7 @@ public class ConfiguracionService {
         return configOpt;
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public ConfiguracionGeneralEntity saveConfiguracionGeneral(ConfiguracionGeneralEntity config) {
         Optional<ConfiguracionGeneralEntity> existingConfigOpt = configuracionGeneralRepository.findFirst();
         if (existingConfigOpt.isPresent()) {
