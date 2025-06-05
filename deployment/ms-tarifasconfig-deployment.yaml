@@ -35,6 +35,15 @@ spec:
               key: SPRING_DATASOURCE_USERNAME
         - name: SPRING_DATASOURCE_PASSWORD
           value: "postgres"
+        # Add these new environment variables
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server-service:8761/eureka/"
+        - name: EUREKA_CLIENT_FETCH_REGISTRY
+          value: "true"
+        - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+          value: "true"
+        - name: SPRING_APPLICATION_NAME
+          value: "ms-tarifasconfig"
 ---
 apiVersion: v1
 kind: Service
