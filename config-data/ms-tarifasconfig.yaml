@@ -27,3 +27,8 @@ eureka:
     registerWithEureka: true
     serviceUrl:
       defaultZone: http://eureka-server-service:8761/eureka/
+
+logging:
+  level:
+    com.netflix.discovery: DEBUG
+    org.springframework.cloud.netflix.eureka: DEBUG
