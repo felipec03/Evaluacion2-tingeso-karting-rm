@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: ms-tarifasconfig
-          image: ms-tarifasconfig:latest
+          image: felipec03/ms-tarifasconfig:latest
           ports:
             - containerPort: 8080
           env:
@@ -28,12 +28,17 @@ spec:
               value: "true"
             - name: SPRING_PROFILES_ACTIVE
               value: "default"
-            # Variables para la base de datos, si las necesitas:
-            - name: SPRING_DATASOURCE_URL_MS1
-              value: "jdbc:postgresql://<host>:<port>/<db>"
-            - name: DB_USERNAME
-              value: "postgres"
-            - name: DB_PASSWORD
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: SPRING_DATASOURCE_URL_MS1
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
               value: "postgres"
 ---
 apiVersion: v1
