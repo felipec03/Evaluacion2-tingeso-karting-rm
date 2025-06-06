@@ -24,6 +24,11 @@ $MICROSERVICES = @(
         Name = "ms-tarifasconfig"
         Path = "./ms-tarifasconfig"
         Tag = "latest"
+    },
+    @{
+        Name = "ms-descuentoporpersona"
+        Path = "./ms-descuentoporpersona"
+        Tag = "latest"
     }
 )
 

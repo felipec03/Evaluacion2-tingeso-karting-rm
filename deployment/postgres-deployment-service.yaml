@@ -98,3 +98,4 @@ metadata:
 data:
   01-create-databases.sql: | 
     CREATE DATABASE ms1;
+    CREATE DATABASE ms2;
