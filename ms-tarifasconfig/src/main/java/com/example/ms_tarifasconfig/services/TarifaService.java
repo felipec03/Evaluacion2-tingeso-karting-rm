@@ -1,7 +1,5 @@
 package com.example.ms_tarifasconfig.services;
 
-import com.example.ms_tarifasconfig.dtos.CalculoPrecioRequestDTO;
-import com.example.ms_tarifasconfig.dtos.PrecioCalculadoDTO;
 import com.example.ms_tarifasconfig.entities.TarifaEntity;
 import com.example.ms_tarifasconfig.repositories.TarifaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +11,6 @@ import java.util.Optional;
 
 @Service
 public class TarifaService {
-
     @Autowired
     private TarifaRepository tarifaRepository;
 
@@ -74,29 +71,5 @@ public class TarifaService {
             throw new RuntimeException("Tarifa no encontrada con id: " + id);
         }
         tarifaRepository.deleteById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public PrecioCalculadoDTO calcularPrecioBase(CalculoPrecioRequestDTO request) {
-        // Validar entrada
-        if (request.getNumeroPersonas() == null || request.getNumeroPersonas() <= 0) {
-            throw new IllegalArgumentException("El número de personas debe ser mayor a 0.");
-        }
-        if (request.getTipoReserva() == null) {
-            throw new IllegalArgumentException("El tipo de reserva es obligatorio.");
-        }
-
-        // Buscar tarifa activa
-        TarifaEntity tarifa = tarifaRepository.findByTipoReservaAndActivaTrue(request.getTipoReserva())
-                .orElseThrow(() -> new IllegalArgumentException("No se encontró tarifa activa para el tipo de reserva: " + request.getTipoReserva()));
-
-        // Calcular precio base
-        double precioBasePorPersona = tarifa.getPrecioBasePorPersona();
-        double precioTotal = precioBasePorPersona * request.getNumeroPersonas();
-
-        String detalle = String.format("Tipo: %s, Precio base por persona: $%.2f, Personas: %d",
-                tarifa.getDescripcion(), precioBasePorPersona, request.getNumeroPersonas());
-
-        return new PrecioCalculadoDTO(precioTotal, detalle);
     }
 }

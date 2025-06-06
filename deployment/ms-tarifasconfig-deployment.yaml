@@ -16,7 +16,7 @@ spec:
         - name: ms-tarifasconfig
           image: felipec03/ms-tarifasconfig:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8080  # Mantener 8080 ya que usa puerto dinámico
           env:
             - name: SPRING_APPLICATION_NAME
               value: "ms-tarifasconfig"
@@ -44,7 +44,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ms-tarifasconfig
+  name: ms-tarifasconfig-service
   labels:
     app: ms-tarifasconfig
 spec:
@@ -52,6 +52,6 @@ spec:
     app: ms-tarifasconfig
   ports:
     - protocol: TCP
-      port: 8091
-      targetPort: 8091
-  type: NodePort
+      port: 8080      # Puerto que expone el service
+      targetPort: 8080 # Puerto del contenedor (pero será dinámico)
+  type: ClusterIP
