@@ -90,7 +90,6 @@ spec:
   hostPath:
     path: "/data/postgres-data"
 ---
-
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -99,3 +98,4 @@ data:
   01-create-databases.sql: | 
     CREATE DATABASE ms1;
     CREATE DATABASE ms2;
+    CREATE DATABASE ms3;

@@ -1,32 +1,49 @@
 package com.example.ms_descuentosclientefrecuente.controllers;
 
-import com.example.ms_descuentosclientefrecuente.dtos.DescuentoFrecuenteRequestDto;
-import com.example.ms_descuentosclientefrecuente.dtos.DescuentoFrecuenteResponseDto;
+
 import com.example.ms_descuentosclientefrecuente.services.DescuentoFrecuenteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+
 @RestController
-@RequestMapping("/api/descuentos/frecuente")
+@RequestMapping("/descuentos")
 public class DescuentoFrecuenteController {
 
     @Autowired
-    private DescuentoFrecuenteService descuentoFrecuenteService;
+    private DescuentoFrecuenteService descuentoService;
 
-    @PostMapping("/calcular")
-    public ResponseEntity<DescuentoFrecuenteResponseDto> calcularDescuentoFrecuente(
-            @RequestBody DescuentoFrecuenteRequestDto requestDto) {
+    /**
+     * Obtiene el porcentaje de descuento para un cliente en un mes y año específicos
+     */
+    @GetMapping("/{rutCliente}")
+    public ResponseEntity<Double> obtenerDescuento(
+            @PathVariable String rutCliente,
+            @RequestParam(required = false) Integer mes,
+            @RequestParam(required = false) Integer anio) {
 
-        if (requestDto.getEmailArrendatario() == null || requestDto.getEmailArrendatario().isEmpty() ||
-                requestDto.getFechaReservaActual() == null || requestDto.getPrecioInicial() <= 0) {
-            return ResponseEntity.badRequest().build(); // Basic validation
+        // Si no se especifican mes y año, usar el mes y año actuales
+        if (mes == null || anio == null) {
+            LocalDate fechaActual = LocalDate.now();
+            mes = mes != null ? mes : fechaActual.getMonthValue();
+            anio = anio != null ? anio : fechaActual.getYear();
         }
 
-        DescuentoFrecuenteResponseDto response = descuentoFrecuenteService.calcularDescuento(requestDto);
-        return ResponseEntity.ok(response);
+        Double porcentajeDescuento = descuentoService.calcularDescuento(rutCliente, mes, anio);
+        return ResponseEntity.ok(porcentajeDescuento);
+    }
+
+    /**
+     * Obtiene el porcentaje de descuento actual para un cliente
+     */
+    @GetMapping("/actual/{rutCliente}")
+    public ResponseEntity<Double> obtenerDescuentoActual(@PathVariable String rutCliente) {
+        Double porcentajeDescuento = descuentoService.obtenerDescuentoActual(rutCliente);
+        return ResponseEntity.ok(porcentajeDescuento);
     }
 }

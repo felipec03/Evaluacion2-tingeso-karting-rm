@@ -48,7 +48,7 @@ public class DescuentoPersonaController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Boolean> eliminarDescuentoPorId(@PathVariable Long id) throws Exception {
-        var isDeleted = descuentoPersonaService.eliminarDescuento(id);
+        descuentoPersonaService.eliminarDescuento(id);
         return ResponseEntity.noContent().build();
     }
 
@@ -66,6 +66,8 @@ public class DescuentoPersonaController {
         return ResponseEntity.ok(descuentoAplicado);
     }
 
+    // Ya no es necesario este endpoint porque usamos @PostConstruct
+    // pero lo dejamos por compatibilidad con código existente
     @PostMapping("/inicializar")
     public ResponseEntity<String> inicializarDescuentos() {
         descuentoPersonaService.inicializarDescuentosPorDefecto();

@@ -16,8 +16,11 @@ public class DescuentoPersonaEntity {
     @Column(unique = true, nullable = false)
     private Long id;
 
-    @Column(name = "numero_personas")
-    private int numeroPersonas;
+    @Column(name = "personas_min")
+    private int personasMin;
+
+    @Column(name = "personas_max")
+    private int personasMax;
 
     @Column(name = "porcentaje_descuento")
     private double porcentajeDescuento;

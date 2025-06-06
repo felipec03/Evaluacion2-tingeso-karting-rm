@@ -8,4 +8,5 @@ data:
 
   SPRING_DATASOURCE_URL_MS1: "jdbc:postgresql://postgres-db-service:5432/ms1"
   SPRING_DATASOURCE_URL_MS2: "jdbc:postgresql://postgres-db-service:5432/ms2"
+  SPRING_DATASOURCE_URL_MS3: "jdbc:postgresql://postgres-db-service:5432/ms3"
   SPRING_DATASOURCE_USERNAME: "postgres"

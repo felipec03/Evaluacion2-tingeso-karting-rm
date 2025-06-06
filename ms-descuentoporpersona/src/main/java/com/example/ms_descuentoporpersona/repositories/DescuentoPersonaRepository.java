@@ -13,6 +13,6 @@ public interface DescuentoPersonaRepository extends JpaRepository<DescuentoPerso
 
     List<DescuentoPersonaEntity> findByActivoTrue();
 
-    @Query("SELECT d FROM DescuentoPersonaEntity d WHERE d.numeroPersonas <= :personas AND d.activo = true ORDER BY d.numeroPersonas DESC")
+    @Query("SELECT d FROM DescuentoPersonaEntity d WHERE d.personasMin <= :personas AND d.personasMax >= :personas AND d.activo = true ORDER BY d.porcentajeDescuento DESC")
     List<DescuentoPersonaEntity> findDescuentoByPersonas(@Param("personas") int personas);
 }

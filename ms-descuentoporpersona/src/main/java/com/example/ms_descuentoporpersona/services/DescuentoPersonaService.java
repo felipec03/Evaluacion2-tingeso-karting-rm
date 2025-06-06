@@ -5,6 +5,7 @@ import com.example.ms_descuentoporpersona.repositories.DescuentoPersonaRepositor
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 
 @Service
@@ -48,7 +49,7 @@ public class DescuentoPersonaService {
             return 0.0;
         }
 
-        // Retorna el descuento con el mayor número de personas que sea menor o igual al número dado
+        // Retorna el descuento aplicable para el número de personas
         return descuentos.get(0).getPorcentajeDescuento();
     }
 
@@ -61,14 +62,19 @@ public class DescuentoPersonaService {
     }
 
     // Método para inicializar datos por defecto según la rúbrica
+    @PostConstruct
     public void inicializarDescuentosPorDefecto() {
         if (descuentoPersonaRepository.count() == 0) {
-            // 2-5 personas: 3% descuento
-            guardarDescuento(new DescuentoPersonaEntity(null, 2, 3.0, true));
-            // 6-9 personas: 8% descuento
-            guardarDescuento(new DescuentoPersonaEntity(null, 6, 8.0, true));
-            // 10 o más personas: 15% descuento
-            guardarDescuento(new DescuentoPersonaEntity(null, 10, 15.0, true));
+            // 1-2 personas: 0% descuento
+            guardarDescuento(new DescuentoPersonaEntity(null, 1, 2, 0.0, true));
+            // 3-5 personas: 10% descuento
+            guardarDescuento(new DescuentoPersonaEntity(null, 3, 5, 10.0, true));
+            // 6-10 personas: 20% descuento
+            guardarDescuento(new DescuentoPersonaEntity(null, 6, 10, 20.0, true));
+            // 11-15 personas: 30% descuento
+            guardarDescuento(new DescuentoPersonaEntity(null, 11, 15, 30.0, true));
+
+            System.out.println("Descuentos por persona inicializados correctamente");
         }
     }
 }

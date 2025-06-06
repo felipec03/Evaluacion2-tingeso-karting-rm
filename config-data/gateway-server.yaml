@@ -19,6 +19,12 @@ spring:
             - Path=/ms-descuentoporpersona/**
           filters:
             - StripPrefix=1
+        - id: ms-descuentosclientefrecuente
+          uri: lb://ms-descuentosclientefrecuente
+          predicates:
+            - Path=/ms-descuentosclientefrecuente/**
+          filters:
+            - StripPrefix=1
       discovery:
         locator:
           enabled: true

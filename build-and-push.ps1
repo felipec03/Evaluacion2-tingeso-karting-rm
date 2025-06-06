@@ -29,6 +29,11 @@ $MICROSERVICES = @(
         Name = "ms-descuentoporpersona"
         Path = "./ms-descuentoporpersona"
         Tag = "latest"
+    },
+    @{
+        Name = "ms-descuentosclientefrecuente"
+        Path = "./ms-descuentosclientefrecuente"
+        Tag = "latest"
     }
 )
 
