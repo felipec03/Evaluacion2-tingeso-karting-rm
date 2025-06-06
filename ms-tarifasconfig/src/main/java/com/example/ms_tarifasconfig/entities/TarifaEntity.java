@@ -26,4 +26,11 @@ public class TarifaEntity {
 
     @Column(nullable = false)
     private Boolean activa = true;
+
+    public TarifaEntity(int tipoReserva, String descripcion, Double precioBasePorPersona) {
+        this.tipoReserva = tipoReserva;
+        this.precioBasePorPersona = precioBasePorPersona;
+        this.descripcion = descripcion;
+        this.activa = true;
+    }
 }

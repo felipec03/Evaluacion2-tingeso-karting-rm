@@ -2,6 +2,7 @@ package com.example.ms_tarifasconfig.services;
 
 import com.example.ms_tarifasconfig.entities.TarifaEntity;
 import com.example.ms_tarifasconfig.repositories.TarifaRepository;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,17 @@ import java.util.Optional;
 public class TarifaService {
     @Autowired
     private TarifaRepository tarifaRepository;
+
+    @PostConstruct
+    public void initData() {
+        if (tarifaRepository.count() == 0) {
+            tarifaRepository.save(new TarifaEntity(1, "Normal - 10 vueltas o máx 10 min", 15000.0));
+            tarifaRepository.save(new TarifaEntity(2, "Extendida - 15 vueltas o máx 15 min", 20000.0));
+            tarifaRepository.save(new TarifaEntity(3, "Premium - 20 vueltas o máx 20 min", 25000.0));
+
+            System.out.println("Datos iniciales de tarifas cargados.");
+        }
+    }
 
     @Transactional(readOnly = true)
     public List<TarifaEntity> getAllTarifas() {
