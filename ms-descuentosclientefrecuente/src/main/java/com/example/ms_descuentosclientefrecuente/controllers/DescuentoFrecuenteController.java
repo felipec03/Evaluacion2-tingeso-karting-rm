@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/descuentos")
+@RequestMapping("/api/descuentos")
 public class DescuentoFrecuenteController {
 
     @Autowired
