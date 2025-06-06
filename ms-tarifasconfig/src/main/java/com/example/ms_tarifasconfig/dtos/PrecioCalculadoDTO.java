@@ -8,6 +8,6 @@ import lombok.AllArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PrecioCalculadoDTO {
-    private Float precioBaseCalculado;
-    private String detalleCalculo;
+    private Double precioTotal;
+    private String detalle;
 }

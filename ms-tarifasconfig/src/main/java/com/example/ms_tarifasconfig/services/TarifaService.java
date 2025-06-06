@@ -8,9 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,18 +17,15 @@ public class TarifaService {
     @Autowired
     private TarifaRepository tarifaRepository;
 
-    @Autowired
-    private ConfiguracionService configuracionService;
-
-    @Transactional(readOnly = true)
-    public List<TarifaEntity> getAllTarifasActivas() {
-        return tarifaRepository.findAllByActivaTrue();
-    }
     @Transactional(readOnly = true)
     public List<TarifaEntity> getAllTarifas() {
         return tarifaRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public List<TarifaEntity> getAllTarifasActivas() {
+        return tarifaRepository.findAllByActivaTrue();
+    }
 
     @Transactional(readOnly = true)
     public Optional<TarifaEntity> getTarifaById(Long id) {
@@ -45,11 +39,11 @@ public class TarifaService {
 
     @Transactional
     public TarifaEntity saveTarifa(TarifaEntity tarifa) {
+        // Validar que no exista otra tarifa activa para el mismo tipo
         Optional<TarifaEntity> existing = tarifaRepository.findByTipoReservaAndActivaTrue(tarifa.getTipoReserva());
-        if(existing.isPresent() && (tarifa.getId() == null || !existing.get().getId().equals(tarifa.getId())) && tarifa.isActiva()){
+        if (existing.isPresent() && (tarifa.getId() == null || !existing.get().getId().equals(tarifa.getId())) && tarifa.getActiva()) {
             throw new IllegalArgumentException("Ya existe una tarifa activa para el tipo de reserva: " + tarifa.getTipoReserva());
         }
-        tarifa.setId(null); // Ensure creation
         return tarifaRepository.save(tarifa);
     }
 
@@ -58,8 +52,8 @@ public class TarifaService {
         TarifaEntity tarifa = tarifaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Tarifa no encontrada con id: " + id));
 
-        // Check for conflict if activating or changing tipoReserva of an active tariff
-        if (tarifaDetails.isActiva()) {
+        // Validar conflictos si se está activando
+        if (tarifaDetails.getActiva()) {
             Optional<TarifaEntity> conflictingTariff = tarifaRepository.findByTipoReservaAndActivaTrue(tarifaDetails.getTipoReserva());
             if (conflictingTariff.isPresent() && !conflictingTariff.get().getId().equals(id)) {
                 throw new IllegalArgumentException("Ya existe otra tarifa activa para el tipo de reserva: " + tarifaDetails.getTipoReserva());
@@ -69,15 +63,13 @@ public class TarifaService {
         tarifa.setTipoReserva(tarifaDetails.getTipoReserva());
         tarifa.setDescripcion(tarifaDetails.getDescripcion());
         tarifa.setPrecioBasePorPersona(tarifaDetails.getPrecioBasePorPersona());
-        tarifa.setPorcentajeRecargoFinDeSemana(tarifaDetails.getPorcentajeRecargoFinDeSemana());
-        tarifa.setPorcentajeRecargoFeriado(tarifaDetails.getPorcentajeRecargoFeriado());
-        tarifa.setActiva(tarifaDetails.isActiva());
+        tarifa.setActiva(tarifaDetails.getActiva());
+
         return tarifaRepository.save(tarifa);
     }
 
     @Transactional
     public void deleteTarifa(Long id) {
-        // Consider soft delete by setting activa = false instead, if business logic allows
         if (!tarifaRepository.existsById(id)) {
             throw new RuntimeException("Tarifa no encontrada con id: " + id);
         }
@@ -86,41 +78,25 @@ public class TarifaService {
 
     @Transactional(readOnly = true)
     public PrecioCalculadoDTO calcularPrecioBase(CalculoPrecioRequestDTO request) {
-        TarifaEntity tarifa = tarifaRepository.findByTipoReservaAndActivaTrue(request.getTipoReserva())
-                .orElseThrow(() -> new IllegalArgumentException("No se encontró tarifa activa para el tipo de reserva: " + request.getTipoReserva()));
-
+        // Validar entrada
         if (request.getNumeroPersonas() == null || request.getNumeroPersonas() <= 0) {
             throw new IllegalArgumentException("El número de personas debe ser mayor a 0.");
         }
-        if (request.getFechaHoraInicio() == null) {
-            throw new IllegalArgumentException("La fecha y hora de inicio son obligatorias.");
+        if (request.getTipoReserva() == null) {
+            throw new IllegalArgumentException("El tipo de reserva es obligatorio.");
         }
 
+        // Buscar tarifa activa
+        TarifaEntity tarifa = tarifaRepository.findByTipoReservaAndActivaTrue(request.getTipoReserva())
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró tarifa activa para el tipo de reserva: " + request.getTipoReserva()));
 
-        float precioBasePorPersona = tarifa.getPrecioBasePorPersona();
-        float precioTotalPersonas = precioBasePorPersona * request.getNumeroPersonas();
+        // Calcular precio base
+        double precioBasePorPersona = tarifa.getPrecioBasePorPersona();
+        double precioTotal = precioBasePorPersona * request.getNumeroPersonas();
 
-        LocalDateTime fechaHoraInicio = request.getFechaHoraInicio();
-        LocalDate fechaInicio = fechaHoraInicio.toLocalDate();
-        DayOfWeek diaSemana = fechaInicio.getDayOfWeek();
+        String detalle = String.format("Tipo: %s, Precio base por persona: $%.2f, Personas: %d",
+                tarifa.getDescripcion(), precioBasePorPersona, request.getNumeroPersonas());
 
-        float precioFinal = precioTotalPersonas;
-        StringBuilder detalle = new StringBuilder(String.format("Precio base (%d personas): %.2f", request.getNumeroPersonas(), precioTotalPersonas));
-
-        boolean esFeriado = configuracionService.esFeriado(fechaInicio);
-        boolean esFinDeSemana = diaSemana == DayOfWeek.SATURDAY || diaSemana == DayOfWeek.SUNDAY;
-
-        // Feriado surcharge takes precedence
-        if (esFeriado && tarifa.getPorcentajeRecargoFeriado() != null && tarifa.getPorcentajeRecargoFeriado() > 0) {
-            float recargo = precioTotalPersonas * tarifa.getPorcentajeRecargoFeriado();
-            precioFinal += recargo;
-            detalle.append(String.format(", Recargo Feriado (%.0f%%): +%.2f", tarifa.getPorcentajeRecargoFeriado() * 100, recargo));
-        } else if (esFinDeSemana && tarifa.getPorcentajeRecargoFinDeSemana() != null && tarifa.getPorcentajeRecargoFinDeSemana() > 0) {
-            float recargo = precioTotalPersonas * tarifa.getPorcentajeRecargoFinDeSemana();
-            precioFinal += recargo;
-            detalle.append(String.format(", Recargo Fin de Semana (%.0f%%): +%.2f", tarifa.getPorcentajeRecargoFinDeSemana() * 100, recargo));
-        }
-
-        return new PrecioCalculadoDTO(precioFinal, detalle.toString());
+        return new PrecioCalculadoDTO(precioTotal, detalle);
     }
 }

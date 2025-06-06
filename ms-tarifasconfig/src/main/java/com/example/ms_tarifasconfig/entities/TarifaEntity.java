@@ -1,9 +1,9 @@
 package com.example.ms_tarifasconfig.entities;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "tarifas")
@@ -15,20 +15,15 @@ public class TarifaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private Integer tipoReserva; // e.g., 1 for Adulto, 2 for Niño, 3 for Mixta
+    @Column(nullable = false)
+    private Integer tipoReserva; // 1: Normal (10 vueltas), 2: Extendida (15 vueltas), 3: Premium (20 vueltas)
 
     @Column(nullable = false)
-    private String descripcion; // e.g., "Adulto (10 vueltas)", "Niño (10 vueltas)"
+    private String descripcion; // e.g., "Normal (10 vueltas)", "Extendida (15 vueltas)"
 
     @Column(nullable = false)
-    private Float precioBasePorPersona; // Price per person for this type
+    private Double precioBasePorPersona; // Precio base por persona para este tipo
 
     @Column(nullable = false)
-    private Float porcentajeRecargoFinDeSemana = 0.0f; // e.g., 0.15 for 15%
-
-    @Column(nullable = false)
-    private Float porcentajeRecargoFeriado = 0.0f; // e.g., 0.25 for 25%
-
-    private boolean activa = true;
+    private Boolean activa = true;
 }

@@ -20,10 +20,11 @@ public class TarifaController {
     @Autowired
     private TarifaService tarifaService;
 
-    // --- Mappers ---
+    // Mappers
     private TarifaDTO toDto(TarifaEntity entity) {
         if (entity == null) return null;
-        return new TarifaDTO(entity.getId(), entity.getTipoReserva(), entity.getDescripcion(), entity.getPrecioBasePorPersona(), entity.getPorcentajeRecargoFinDeSemana(), entity.getPorcentajeRecargoFeriado(), entity.isActiva());
+        return new TarifaDTO(entity.getId(), entity.getTipoReserva(), entity.getDescripcion(),
+                entity.getPrecioBasePorPersona(), entity.getActiva());
     }
 
     private TarifaEntity toEntity(TarifaDTO dto) {
@@ -33,13 +34,12 @@ public class TarifaController {
         entity.setTipoReserva(dto.getTipoReserva());
         entity.setDescripcion(dto.getDescripcion());
         entity.setPrecioBasePorPersona(dto.getPrecioBasePorPersona());
-        entity.setPorcentajeRecargoFinDeSemana(dto.getPorcentajeRecargoFinDeSemana());
-        entity.setPorcentajeRecargoFeriado(dto.getPorcentajeRecargoFeriado());
-        entity.setActiva(dto.isActiva());
+        entity.setActiva(dto.getActiva());
         return entity;
     }
 
-    // --- Endpoints ---
+    // Endpoints principales del RF1
+
     @GetMapping("/")
     public ResponseEntity<List<TarifaDTO>> getAllTarifas(@RequestParam(required = false, defaultValue = "false") boolean soloActivas) {
         List<TarifaEntity> tarifas = soloActivas ? tarifaService.getAllTarifasActivas() : tarifaService.getAllTarifas();
@@ -56,7 +56,7 @@ public class TarifaController {
 
     @GetMapping("/tipo/{tipoReserva}")
     public ResponseEntity<TarifaDTO> getTarifaByTipoReserva(@PathVariable Integer tipoReserva) {
-        return tarifaService.getTarifaByTipoReserva(tipoReserva) // This gets active ones by default
+        return tarifaService.getTarifaByTipoReserva(tipoReserva)
                 .map(this::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -81,7 +81,7 @@ public class TarifaController {
             TarifaEntity tarifaDetails = toEntity(tarifaDto);
             TarifaEntity updatedTarifa = tarifaService.updateTarifa(id, tarifaDetails);
             return ResponseEntity.ok(toDto(updatedTarifa));
-        } catch (RuntimeException e) { // Catches both RuntimeException from service and others
+        } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().contains("Tarifa no encontrada")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
             }
