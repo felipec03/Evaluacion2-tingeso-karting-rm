@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-tarifadiaespecial-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-tarifadiaespecial
+  template:
+    metadata:
+      labels:
+        app: ms-tarifadiaespecial
+    spec:
+      containers:
+        - name: ms-tarifadiaespecial
+          image: felipec03/ms-tarifadiaespecial:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "ms-tarifadiaespecial"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka-server-service:8761/eureka/"
+            - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+              value: "true"
+            - name: EUREKA_CLIENT_FETCH_REGISTRY
+              value: "true"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "default"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: SPRING_DATASOURCE_URL_MS4
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "postgres"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-tarifadiaespecial-service
+  labels:
+    app: ms-tarifadiaespecial
+spec:
+  selector:
+    app: ms-tarifadiaespecial
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

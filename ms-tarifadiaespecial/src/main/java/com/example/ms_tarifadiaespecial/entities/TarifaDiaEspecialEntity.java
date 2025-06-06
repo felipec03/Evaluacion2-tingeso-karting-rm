@@ -1,32 +1,24 @@
 package com.example.ms_tarifadiaespecial.entities;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "tarifas_dias_especiales")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor @AllArgsConstructor
 public class TarifaDiaEspecialEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private LocalDate fecha; // The special date
+    private LocalDate fecha; // Día feriado específico, puede ser null para fines de semana
 
-    @Column(nullable = false)
-    private String descripcion; // e.g., "Navidad", "Año Nuevo"
+    private String descripcion; // Ej: "Navidad", "Feriado", "Fin de semana"
 
-    @Column(nullable = false)
-    private String tipoTarifa; // "FIJA", "PORCENTUAL_DESCUENTO", "PORCENTUAL_RECARGO"
+    private Double recargoPorcentaje; // Ej: 25.0 para 25% de recargo, puede ser 0 para sin recargo
 
-    @Column(nullable = false)
-    private Double valor; // The fixed amount or percentage value
+    private Boolean esFeriado; // true si es feriado, false si es fin de semana
 }

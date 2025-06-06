@@ -25,6 +25,12 @@ spring:
             - Path=/ms-descuentosclientefrecuente/**
           filters:
             - StripPrefix=1
+        - id: ms-tarifadiaespecial
+          uri: lb://ms-tarifadiaespecial
+          predicates:
+            - Path=/ms-tarifadiaespecial/**
+          filters:
+            - StripPrefix=1
       discovery:
         locator:
           enabled: true
