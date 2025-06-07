@@ -97,7 +97,7 @@ public class ReservaService {
             LOGGER.log(Level.SEVERE, "M1 Exception: Error al obtener tarifa: " + e.getMessage(), e);
             throw new RuntimeException("Error al comunicarse con el servicio de tarifas (M1): " + e.getMessage());
         }
-        double montoBaseTotalM1 = precioBasePorPersonaM1 * reserva.getCantidadPersonas();
+        double montoBaseTotalM1 = precioBasePorPersonaM1;
         reserva.setMontoBase(montoBaseTotalM1);
 
         // 2. Apply M4 (ms-tarifadiaespecial) adjustments
