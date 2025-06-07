@@ -12,8 +12,16 @@ import java.util.List;
 
 @Repository
 public interface ReservaRepository extends JpaRepository<ReservaEntity, Long> {
-    @Query("SELECT r FROM ReservaEntity r WHERE r.estadoReserva NOT IN ('CANCELADA') AND " +
-            "((r.fechaHora < :finNuevaReserva AND (r.fechaHora + FUNCTION('make_time', r.duracionHoras, 0, 0.0)) > :inicioNuevaReserva))")
+    /**
+     * Encuentra reservas que se solapan con el periodo dado.
+     * Una reserva existente (r) se solapa con una nueva (n) si:
+     * (r.fechaHora < n.finNuevaReserva) Y (r.fechaHora + r.duracionHoras > n.inicioNuevaReserva)
+     * Se usa FUNCTION('make_interval', ...) para sumar duracionHoras a fechaHora, asumiendo PostgreSQL.
+     * Los argumentos para make_interval son: years, months, weeks, days, hours, mins, secs.
+     */
+    @Query("SELECT r FROM ReservaEntity r WHERE r.estadoReserva NOT IN ('CANCELADA', 'PAGADA_Y_FINALIZADA') AND " +
+            "(r.fechaHora < :finNuevaReserva AND " +
+            "(r.fechaHora + FUNCTION('make_interval', 0, 0, 0, 0, r.duracionHoras, 0, 0.0)) > :inicioNuevaReserva)")
     List<ReservaEntity> findReservasSolapadas(@Param("inicioNuevaReserva") LocalDateTime inicioNuevaReserva,
                                               @Param("finNuevaReserva") LocalDateTime finNuevaReserva);
 
