@@ -186,11 +186,12 @@ public class ComprobanteService {
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
             String fechaInicio = reserva.getFechaHora() != null ? reserva.getFechaHora().format(formatter) : "N/A";
-            LocalDateTime fechaFinDateTime = reserva.getFechaHora() != null ? reserva.getFechaHora().plusHours(reserva.getDuracionHoras()) : null;
+            LocalDateTime fechaFinDateTime = reserva.getFechaHora() != null ?
+                    reserva.getFechaHora().plusMinutes(reserva.getDuracionMinutos()) : null;
             String fechaFin = fechaFinDateTime != null ? fechaFinDateTime.format(formatter) : "N/A";
 
             addInfoRow(infoTable, "Fecha y Hora:", fechaInicio + " a " + fechaFin);
-            addInfoRow(infoTable, "Duración:", reserva.getDuracionHoras() + " horas");
+            addInfoRow(infoTable, "Duración:", reserva.getDuracionMinutos() + " minutos");
             addInfoRow(infoTable, "Número de Personas:", String.valueOf(reserva.getCantidadPersonas()));
 
             String tipoReservaStr = switch (reserva.getTipoReserva()) {

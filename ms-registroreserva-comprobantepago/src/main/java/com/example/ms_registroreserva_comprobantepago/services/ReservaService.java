@@ -53,15 +53,15 @@ public class ReservaService {
 
     private int getDuracionPorTipoReserva(int tipoReserva) {
         return switch (tipoReserva) {
-            case 1 -> 1; // Tipo 1 dura 1 hora
-            case 2 -> 2; // Tipo 2 dura 2 horas
-            // Add more cases as needed for different tipoReserva values
-            default -> 1; // Duración por defecto si el tipo no está definido arriba
+            case 1 -> 30; // Tipo 1 (10 vueltas): 30 minutos
+            case 2 -> 35; // Tipo 2 (15 vueltas): 35 minutos
+            case 3 -> 40; // Tipo 3 (20 vueltas): 40 minutos
+            default -> 30; // Duración por defecto si el tipo no está definido
         };
     }
 
-    public boolean checkDisponibilidadInterna(LocalDateTime inicioNuevaReserva, int duracionHorasNuevaReserva, int cantidadPersonasNuevaReserva) {
-        LocalDateTime finNuevaReserva = inicioNuevaReserva.plusHours(duracionHorasNuevaReserva);
+    public boolean checkDisponibilidadInterna(LocalDateTime inicioNuevaReserva, int duracionMinutosNuevaReserva, int cantidadPersonasNuevaReserva) {
+        LocalDateTime finNuevaReserva = inicioNuevaReserva.plusMinutes(duracionMinutosNuevaReserva);
         List<ReservaEntity> reservasSolapadas = reservaRepository.findReservasSolapadas(inicioNuevaReserva, finNuevaReserva);
         int kartsOcupados = 0;
         for (ReservaEntity existente : reservasSolapadas) {
@@ -74,12 +74,12 @@ public class ReservaService {
     public ReservaEntity crearReserva(ReservaEntity reserva) {
         reserva.setId(null); // Ensure creation
 
-        // Determine and set duracionHoras if not provided or invalid
-        if (reserva.getDuracionHoras() <= 0) {
-            reserva.setDuracionHoras(getDuracionPorTipoReserva(reserva.getTipoReserva()));
+        // Determine and set duracionMinutos if not provided or invalid
+        if (reserva.getDuracionMinutos() <= 0) {
+            reserva.setDuracionMinutos(getDuracionPorTipoReserva(reserva.getTipoReserva()));
         }
 
-        if (!checkDisponibilidadInterna(reserva.getFechaHora(), reserva.getDuracionHoras(), reserva.getCantidadPersonas())) {
+        if (!checkDisponibilidadInterna(reserva.getFechaHora(), reserva.getDuracionMinutos(), reserva.getCantidadPersonas())) {
             throw new RuntimeException("No hay disponibilidad de karts para la fecha, hora y cantidad de personas solicitadas.");
         }
 

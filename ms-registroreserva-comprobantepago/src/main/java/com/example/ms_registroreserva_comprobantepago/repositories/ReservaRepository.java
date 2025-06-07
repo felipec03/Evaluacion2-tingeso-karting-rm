@@ -21,7 +21,7 @@ public interface ReservaRepository extends JpaRepository<ReservaEntity, Long> {
      */
     @Query(value = "SELECT r.* FROM reservas r WHERE r.estado_reserva NOT IN ('CANCELADA', 'PAGADA_Y_FINALIZADA') AND " +
             "r.fecha_hora < :finNuevaReserva AND " +
-            "(r.fecha_hora + (r.duracion_horas * INTERVAL '1 hour')) > :inicioNuevaReserva",
+            "(r.fecha_hora + (r.duracion_minutos * INTERVAL '1 minute')) > :inicioNuevaReserva",
             nativeQuery = true)
     List<ReservaEntity> findReservasSolapadas(@Param("inicioNuevaReserva") LocalDateTime inicioNuevaReserva,
                                               @Param("finNuevaReserva") LocalDateTime finNuevaReserva);

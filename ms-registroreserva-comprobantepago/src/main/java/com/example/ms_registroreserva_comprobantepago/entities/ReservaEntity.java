@@ -36,5 +36,5 @@ public class ReservaEntity {
     private Double montoFinal;
     private String estadoReserva; // PENDIENTE, CONFIRMADA, PAGADA, CANCELADA
 
-    private int duracionHoras; // Duración de la reserva en horas
+    private Integer duracionMinutos = 0; // Duración de la reserva en minutos
 }
