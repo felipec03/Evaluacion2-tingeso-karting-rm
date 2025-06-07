@@ -72,16 +72,18 @@ public class ComprobanteController {
     @GetMapping("/id/{idComprobante}/pdf")
     public ResponseEntity<byte[]> descargarPdfComprobantePorId(@PathVariable Long idComprobante) {
         try {
-            byte[] pdfBytes = comprobanteService.generarPdfBytesParaComprobantePorId(idComprobante); // Nuevo método en el servicio
+            byte[] pdfBytes = comprobanteService.generarPdfBytesParaComprobantePorId(idComprobante);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            // Usar "inline" para intentar visualización directa
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"Comprobante-ID-" + idComprobante + ".pdf\"");
+            // Change from inline to attachment to force download
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Comprobante-" + idComprobante + ".pdf");
+            // Add content length header
+            headers.setContentLength(pdfBytes.length);
 
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
         } catch (RuntimeException e) {
-            // Considerar loggear el error aquí: logger.error("Error al generar PDF para ID {}: {}", idComprobante, e.getMessage());
+            // Error handling remains the same
             if (e.getMessage() != null && (e.getMessage().contains("Comprobante no encontrado") || e.getMessage().contains("Reserva asociada no encontrada"))) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }

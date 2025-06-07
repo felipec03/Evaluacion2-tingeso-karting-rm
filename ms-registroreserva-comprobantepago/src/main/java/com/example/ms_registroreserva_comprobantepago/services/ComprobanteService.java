@@ -164,7 +164,7 @@ public class ComprobanteService {
             Locale localeChile = new Locale("es", "CL");
 
             Paragraph header = new Paragraph()
-                    .add(new Text("🏁 Comprobante de Reserva - KartingRM 🏁").setBold().setFontSize(16))
+                    .add(new Text("Comprobante de Reserva - KartingRM").setBold().setFontSize(16))
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginBottom(20);
             document.add(header);
@@ -239,8 +239,17 @@ public class ComprobanteService {
             Paragraph footer = new Paragraph().add(new Text("Este comprobante debe ser presentado el día de su reserva en el Kartódromo.\n").setItalic()).add(new Text("¡Gracias por preferir KartingRM! Te esperamos.").setItalic()).setTextAlignment(TextAlignment.CENTER).setFontSize(10).setMarginTop(20);
             document.add(footer);
 
-            logger.info("PDF generado con éxito (helper) para comprobante código: {}", comprobante.getCodigoComprobante());
-            return outputStream.toByteArray();
+            // Ensure document is properly closed
+            document.close();
+            pdfDoc.close();
+            writer.close();
+
+            // Get bytes after everything is closed
+            byte[] pdfBytes = outputStream.toByteArray();
+            outputStream.close();
+
+            logger.info("PDF generado con éxito (helper) para comprobante código: {} - Tamaño: {} bytes", comprobante.getCodigoComprobante(), pdfBytes.length);
+            return pdfBytes;
 
         } catch (Exception e) {
             logger.error("Error al generar el PDF (helper) para comprobante {}: {}", comprobante.getCodigoComprobante(), e.getMessage(), e);
