@@ -1,99 +1,224 @@
 package com.example.ms_registroreserva_comprobantepago.services;
 
-import com.example.ms_registroreserva_comprobantepago.dtos.ComprobantePagoDTO;
-import com.example.ms_registroreserva_comprobantepago.dtos.CrearReservaDTO;
-import com.example.ms_registroreserva_comprobantepago.dtos.ReservaConPagosDTO;
-import com.example.ms_registroreserva_comprobantepago.dtos.ReservaDTO;
-import com.example.ms_registroreserva_comprobantepago.entities.EstadoReserva;
+import com.example.ms_registroreserva_comprobantepago.dtos.TarifaDTO;
 import com.example.ms_registroreserva_comprobantepago.entities.ReservaEntity;
+import com.example.ms_registroreserva_comprobantepago.feignclients.DescuentoFrecuenteFeignClient;
+import com.example.ms_registroreserva_comprobantepago.feignclients.DescuentoPersonaFeignClient;
+import com.example.ms_registroreserva_comprobantepago.feignclients.TarifaConfigFeignClient;
+import com.example.ms_registroreserva_comprobantepago.feignclients.TarifaDiaEspecialFeignClient;
 import com.example.ms_registroreserva_comprobantepago.repositories.ReservaRepository;
-import jakarta.persistence.EntityNotFoundException;
-import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Service
 public class ReservaService {
+
+    private static final Logger LOGGER = Logger.getLogger(ReservaService.class.getName());
 
     @Autowired
     private ReservaRepository reservaRepository;
 
     @Autowired
-    private ModelMapper modelMapper;
+    private DescuentoPersonaFeignClient descuentoPersonaFeignClient;
+
+    @Autowired
+    private TarifaConfigFeignClient tarifaConfigFeignClient;
+
+    @Autowired
+    private DescuentoFrecuenteFeignClient descuentoFrecuenteFeignClient;
+
+    @Autowired
+    private TarifaDiaEspecialFeignClient tarifaDiaEspecialFeignClient;
+
+    @Value("${app.karting.max-karts:20}")
+    private int maxKartsDisponibles;
+
+    public List<ReservaEntity> getAllReservas() {
+        return reservaRepository.findAll();
+    }
+
+    public Optional<ReservaEntity> getReservaById(Long id) {
+        return reservaRepository.findById(id);
+    }
+
+    private int getDuracionPorTipoReserva(int tipoReserva) {
+        return switch (tipoReserva) {
+            case 1 -> 1; // Tipo 1 dura 1 hora
+            case 2 -> 2; // Tipo 2 dura 2 horas
+            // Add more cases as needed for different tipoReserva values
+            default -> 1; // Duración por defecto si el tipo no está definido arriba
+        };
+    }
+
+    public boolean checkDisponibilidadInterna(LocalDateTime inicioNuevaReserva, int duracionHorasNuevaReserva, int cantidadPersonasNuevaReserva) {
+        LocalDateTime finNuevaReserva = inicioNuevaReserva.plusHours(duracionHorasNuevaReserva);
+        List<ReservaEntity> reservasSolapadas = reservaRepository.findReservasSolapadas(inicioNuevaReserva, finNuevaReserva);
+        int kartsOcupados = 0;
+        for (ReservaEntity existente : reservasSolapadas) {
+            kartsOcupados += existente.getCantidadPersonas();
+        }
+        return (kartsOcupados + cantidadPersonasNuevaReserva) <= maxKartsDisponibles;
+    }
 
     @Transactional
-    public ReservaDTO registrarReserva(CrearReservaDTO crearReservaDTO) {
-        // Lógica de validación adicional si es necesaria:
-        // - Verificar disponibilidad de habitación (requeriría comunicación con ms-habitaciones)
-        // - Validar que fechaSalida > fechaEntrada
-        if (crearReservaDTO.getFechaSalida().isBefore(crearReservaDTO.getFechaEntrada()) ||
-                crearReservaDTO.getFechaSalida().isEqual(crearReservaDTO.getFechaEntrada())) {
-            throw new IllegalArgumentException("La fecha de salida debe ser posterior a la fecha de entrada.");
+    public ReservaEntity crearReserva(ReservaEntity reserva) {
+        reserva.setId(null); // Ensure creation
+
+        // Determine and set duracionHoras if not provided or invalid
+        if (reserva.getDuracionHoras() <= 0) {
+            reserva.setDuracionHoras(getDuracionPorTipoReserva(reserva.getTipoReserva()));
         }
 
-        ReservaEntity reservaEntity = modelMapper.map(crearReservaDTO, ReservaEntity.class);
-        // El estado PENDIENTE y fechas de creación/actualización se manejan con @PrePersist
-
-        // Aquí podría ir la lógica de cálculo de precio si no viene en el DTO
-        // reservaEntity.setPrecioTotal(calcularPrecio(crearReservaDTO.getIdHabitacion(), ...));
-
-        ReservaEntity savedReserva = reservaRepository.save(reservaEntity);
-        return modelMapper.map(savedReserva, ReservaDTO.class);
-    }
-
-    @Transactional(readOnly = true)
-    public ReservaDTO obtenerReservaPorId(Long id) {
-        ReservaEntity reservaEntity = reservaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada con ID: " + id));
-        return modelMapper.map(reservaEntity, ReservaDTO.class);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ReservaDTO> obtenerReservasPorCliente(Long idCliente) {
-        List<ReservaEntity> reservas = reservaRepository.findByIdCliente(idCliente);
-        return reservas.stream()
-                .map(reserva -> modelMapper.map(reserva, ReservaDTO.class))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public ReservaDTO actualizarEstadoReserva(Long id, EstadoReserva nuevoEstado) {
-        ReservaEntity reservaEntity = reservaRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada con ID: " + id));
-
-        // Lógica de validación de transición de estados si es necesaria
-        // Ej: No se puede confirmar una reserva cancelada directamente.
-        reservaEntity.setEstado(nuevoEstado);
-        ReservaEntity updatedReserva = reservaRepository.save(reservaEntity);
-        return modelMapper.map(updatedReserva, ReservaDTO.class);
-    }
-
-    @Transactional
-    public ReservaDTO cancelarReserva(Long id) {
-        return actualizarEstadoReserva(id, EstadoReserva.CANCELADA);
-    }
-
-    @Transactional(readOnly = true)
-    public ReservaConPagosDTO obtenerReservaConPagos(Long idReserva) {
-        ReservaEntity reservaEntity = reservaRepository.findById(idReserva)
-                .orElseThrow(() -> new EntityNotFoundException("Reserva no encontrada con ID: " + idReserva));
-
-        ReservaConPagosDTO dto = modelMapper.map(reservaEntity, ReservaConPagosDTO.class);
-
-        if (reservaEntity.getPagos() != null) {
-            List<ComprobantePagoDTO> pagosDTO = reservaEntity.getPagos().stream()
-                    .map(pago -> {
-                        ComprobantePagoDTO pagoDTO = modelMapper.map(pago, ComprobantePagoDTO.class);
-                        pagoDTO.setIdReserva(reservaEntity.getId()); // Asegurar que el idReserva esté en el DTO del pago
-                        return pagoDTO;
-                    })
-                    .collect(Collectors.toList());
-            dto.setPagos(pagosDTO);
+        if (!checkDisponibilidadInterna(reserva.getFechaHora(), reserva.getDuracionHoras(), reserva.getCantidadPersonas())) {
+            throw new RuntimeException("No hay disponibilidad de karts para la fecha, hora y cantidad de personas solicitadas.");
         }
-        return dto;
+
+        // 1. Get Base Price per person from M1 (ms-tarifasconfig)
+        double precioBasePorPersonaM1;
+        try {
+            ResponseEntity<TarifaDTO> tarifaResponse = tarifaConfigFeignClient.getTarifaByTipoReserva(reserva.getTipoReserva());
+            if (tarifaResponse.getStatusCode().is2xxSuccessful() && tarifaResponse.getBody() != null && tarifaResponse.getBody().getPrecioBasePorPersona() != null) {
+                precioBasePorPersonaM1 = tarifaResponse.getBody().getPrecioBasePorPersona();
+            } else {
+                LOGGER.log(Level.SEVERE, "M1 Error: No se pudo obtener la tarifa base. Status: " + tarifaResponse.getStatusCode());
+                throw new RuntimeException("No se pudo obtener la tarifa base de M1 (ms-tarifasconfig).");
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "M1 Exception: Error al obtener tarifa: " + e.getMessage(), e);
+            throw new RuntimeException("Error al comunicarse con el servicio de tarifas (M1): " + e.getMessage());
+        }
+        double montoBaseTotalM1 = precioBasePorPersonaM1 * reserva.getCantidadPersonas();
+        reserva.setMontoBase(montoBaseTotalM1);
+
+        // 2. Apply M4 (ms-tarifadiaespecial) adjustments
+        LocalDate fechaReserva = reserva.getFechaHora().toLocalDate();
+        double precioPostM4Recargos = montoBaseTotalM1; // Default if M4 call fails
+
+        try {
+            // Get price after M4's general recargos (sending 0 cumpleanieros)
+            ResponseEntity<Double> responseRecargoM4 = tarifaDiaEspecialFeignClient.aplicarTarifa(
+                    fechaReserva, montoBaseTotalM1, reserva.getCantidadPersonas(), 0);
+            if (responseRecargoM4.getStatusCode().is2xxSuccessful() && responseRecargoM4.getBody() != null) {
+                precioPostM4Recargos = responseRecargoM4.getBody();
+            } else {
+                LOGGER.log(Level.WARNING, "M4 Warning: No se pudo obtener el precio con recargo (sin desc. cumple). Usando montoBaseTotalM1. Status: " + responseRecargoM4.getStatusCode());
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "M4 Exception: Error al aplicar tarifa especial (recargos): " + e.getMessage(), e);
+        }
+
+        // Calculate M4's specific birthday discount amount, if applicable
+        double montoDescuentoCumpleanosM4 = 0.0;
+        int cantidadCumpleaneros = reserva.getCantidadCumple(); // Direct use as it's int
+
+        if (cantidadCumpleaneros > 0) {
+            try {
+                ResponseEntity<Double> responseNetoConDescCumpleM4 = tarifaDiaEspecialFeignClient.aplicarTarifa(
+                        fechaReserva, montoBaseTotalM1, reserva.getCantidadPersonas(), cantidadCumpleaneros);
+                if (responseNetoConDescCumpleM4.getStatusCode().is2xxSuccessful() && responseNetoConDescCumpleM4.getBody() != null) {
+                    double precioNetoDespuesM4Completo = responseNetoConDescCumpleM4.getBody();
+                    montoDescuentoCumpleanosM4 = precioPostM4Recargos - precioNetoDespuesM4Completo;
+                    if (montoDescuentoCumpleanosM4 < 0) {
+                        LOGGER.log(Level.WARNING, "M4 Warning: Descuento de cumpleaños resultó negativo. Ajustando a 0.");
+                        montoDescuentoCumpleanosM4 = 0;
+                    }
+                } else {
+                    LOGGER.log(Level.WARNING, "M4 Warning: No se pudo obtener el precio neto con descuento de cumpleaños. Status: " + responseNetoConDescCumpleM4.getStatusCode());
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "M4 Exception: Error al aplicar tarifa especial (desc. cumple): " + e.getMessage(), e);
+            }
+        }
+
+        // 3. Calculate Discount from M2 (ms-descuentoporpersona)
+        double montoDescuentoGrupoM2 = 0.0;
+        double porcentajeDescuentoGrupo = 0.0;
+        try {
+            ResponseEntity<Double> descPersonaResponse = descuentoPersonaFeignClient.calcularDescuentoPorPersonas(reserva.getCantidadPersonas());
+            if (descPersonaResponse.getStatusCode().is2xxSuccessful() && descPersonaResponse.getBody() != null) {
+                porcentajeDescuentoGrupo = descPersonaResponse.getBody(); // This is a percentage
+                montoDescuentoGrupoM2 = precioPostM4Recargos * (porcentajeDescuentoGrupo / 100.0);
+            } else {
+                LOGGER.log(Level.WARNING, "M2 Warning: No se pudo obtener descuento por personas. Status: " + descPersonaResponse.getStatusCode());
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "M2 Exception: Error al obtener descuento por personas: " + e.getMessage(), e);
+        }
+
+        // 4. Calculate Discount from M3 (ms-descuentosclientefrecuente)
+        double montoDescuentoFrecuenteM3 = 0.0;
+        double porcentajeDescuentoFrecuente = 0.0;
+        if (reserva.getRutUsuario() != null && !reserva.getRutUsuario().isEmpty()) {
+            try {
+                ResponseEntity<Double> descFrecuenteResponse = descuentoFrecuenteFeignClient.obtenerDescuentoActual(reserva.getRutUsuario());
+                if (descFrecuenteResponse.getStatusCode().is2xxSuccessful() && descFrecuenteResponse.getBody() != null) {
+                    porcentajeDescuentoFrecuente = descFrecuenteResponse.getBody(); // This is a percentage
+                    montoDescuentoFrecuenteM3 = precioPostM4Recargos * (porcentajeDescuentoFrecuente / 100.0);
+                } else {
+                    LOGGER.log(Level.WARNING, "M3 Warning: No se pudo obtener descuento cliente frecuente. Status: " + descFrecuenteResponse.getStatusCode());
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "M3 Exception: Error al obtener descuento cliente frecuente: " + e.getMessage(), e);
+            }
+        }
+
+        // 5. Determine Final Discount (most beneficial of M2, M3, and M4's birthday discount)
+        double montoDescuentoAplicado = 0.0;
+        double porcentajeDescuentoAplicadoFinal = 0.0;
+
+        if (montoDescuentoGrupoM2 > montoDescuentoAplicado) {
+            montoDescuentoAplicado = montoDescuentoGrupoM2;
+            porcentajeDescuentoAplicadoFinal = porcentajeDescuentoGrupo;
+        }
+        if (montoDescuentoFrecuenteM3 > montoDescuentoAplicado) {
+            montoDescuentoAplicado = montoDescuentoFrecuenteM3;
+            porcentajeDescuentoAplicadoFinal = porcentajeDescuentoFrecuente;
+        }
+        if (montoDescuentoCumpleanosM4 > montoDescuentoAplicado) {
+            montoDescuentoAplicado = montoDescuentoCumpleanosM4;
+            if (precioPostM4Recargos > 0) { // Calculate effective percentage for birthday discount
+                porcentajeDescuentoAplicadoFinal = (montoDescuentoCumpleanosM4 / precioPostM4Recargos) * 100.0;
+            } else {
+                porcentajeDescuentoAplicadoFinal = (montoDescuentoCumpleanosM4 > 0) ? 100.0 : 0.0; // If base is 0, any discount is effectively 100% of that 0 base
+            }
+        }
+
+        reserva.setPorcentajeDescuentoAplicado(porcentajeDescuentoAplicadoFinal);
+        reserva.setMontoDescuento(montoDescuentoAplicado);
+
+        // 6. Calculate Final Amount (Subtotal before IVA)
+        double montoSubtotal = precioPostM4Recargos - montoDescuentoAplicado;
+        reserva.setMontoFinal(montoSubtotal);
+
+        // 7. Set initial state
+        reserva.setEstadoReserva("PENDIENTE");
+
+        return reservaRepository.save(reserva);
+    }
+
+    @Transactional
+    public ReservaEntity actualizarEstadoReserva(Long idReserva, String nuevoEstado) {
+        ReservaEntity reserva = reservaRepository.findById(idReserva)
+                .orElseThrow(() -> new RuntimeException("Reserva no encontrada con ID: " + idReserva));
+        reserva.setEstadoReserva(nuevoEstado);
+        return reservaRepository.save(reserva);
+    }
+
+    @Transactional
+    public void deleteReserva(Long id) {
+        if (!reservaRepository.existsById(id)) {
+            throw new RuntimeException("Reserva no encontrada para eliminar con ID: " + id);
+        }
+        reservaRepository.deleteById(id);
     }
 }

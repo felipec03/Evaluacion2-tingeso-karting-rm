@@ -5,10 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "reservas")
@@ -21,44 +18,23 @@ public class ReservaEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String clienteId; // ID del cliente (puede ser un UUID o email)
-    private String emailCliente; // Email para notificaciones y comprobante
-    private String nombreCliente; // Nombre para el comprobante
+    private LocalDateTime fechaHora; // Fecha y hora de inicio de la reserva
+    private int tipoReserva; // Ejemplo: 1=Normal, 2=Extendida, etc. Define precio y quizás duración
+    private int cantidadPersonas;
+    private int cantidadCumple; // Número de personas que están de cumpleaños
 
-    private LocalDateTime inicioReserva;
-    private LocalDateTime finReserva;
-    private LocalDate fechaReserva; // Denormalizado de inicioReserva para queries
-    private int duracionHoras;
+    private String nombreUsuario;
+    private String rutUsuario;
+    private String emailUsuario;
+    private String telefonoUsuario;
 
-    private Date cumpleaniosCliente; // Fecha de cumpleaños del cliente (si aplica para descuento)
-    private int numeroPersonas;
-    private int tipoReserva; // Mapea a los tipos definidos (1: Adulto, 2: Niño, 3: Mixta)
-    private int cantidadPersonasCumpleanos; // Para descuento de cumpleaños
 
-    private float precioBaseCalculado;
-    private float descuentoGrupoAplicado;
-    private float descuentoClienteFrecuenteAplicado;
-    private float descuentoCumpleanosAplicado;
-    private float subtotal; // precioBase - descuentos
-    private float ivaCalculado;
-    private float totalAPagar;
+    // Campos adicionales para la lógica de negocio y persistencia de cálculos
+    private Double montoBase;
+    private Double porcentajeDescuentoAplicado;
+    private Double montoDescuento;
+    private Double montoFinal;
+    private String estadoReserva; // PENDIENTE, CONFIRMADA, PAGADA, CANCELADA
 
-    @Enumerated(EnumType.STRING)
-    private EstadoReserva estado;
-
-    private Long comprobanteId; // ID del comprobante asociado, una vez generado
-
-    private LocalDateTime fechaCreacion;
-    private LocalDateTime fechaActualizacion;
-
-    @PrePersist
-    protected void onCreate() {
-        fechaCreacion = LocalDateTime.now();
-        fechaActualizacion = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        fechaActualizacion = LocalDateTime.now();
-    }
+    private int duracionHoras; // Duración de la reserva en horas
 }

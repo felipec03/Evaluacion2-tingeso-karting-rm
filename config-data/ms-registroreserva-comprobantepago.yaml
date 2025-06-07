@@ -1,0 +1,41 @@
+server:
+  port: 0 # Puerto dinámico, Eureka se encargará
+
+spring:
+  application:
+    name: ms-registroreserva-comprobantepago
+  datasource:
+    # Estas variables serán tomadas del entorno del Pod, que a su vez las toma del ConfigMap
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD} # La contraseña real vendrá del deployment/ConfigMap
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update # o create, validate, none según estrategia
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: felipe.cubillos.a@usach.cl # Considera usar variables de entorno para esto también
+    password: devh aqgr ouhn pnkv # ¡¡¡MUY IMPORTANTE: NO COMMITAR CONTRASEÑAS REALES!!! Usar Secrets o variables de entorno.
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      # Adicional para Gmail si es necesario (puede que no lo sea con starttls)
+      # mail.smtp.ssl.trust: "smtp.gmail.com"
+      # mail.smtp.ssl.protocols: "TLSv1.2"
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://eureka-server-service:8761/eureka/ # URL del servicio Eureka en Kubernetes

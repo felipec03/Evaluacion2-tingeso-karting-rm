@@ -10,5 +10,6 @@ data:
   SPRING_DATASOURCE_URL_MS2: "jdbc:postgresql://postgres-db-service:5432/ms2"
   SPRING_DATASOURCE_URL_MS3: "jdbc:postgresql://postgres-db-service:5432/ms3"
   SPRING_DATASOURCE_URL_MS4: "jdbc:postgresql://postgres-db-service:5432/ms4"
+  SPRING_DATASOURCE_URL_MS5: "jdbc:postgresql://postgres-db-service:5432/ms5"
 
   SPRING_DATASOURCE_USERNAME: "postgres"

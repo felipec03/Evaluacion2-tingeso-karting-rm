@@ -31,6 +31,12 @@ spring:
             - Path=/ms-tarifadiaespecial/**
           filters:
             - StripPrefix=1
+        - id: ms-registroreserva-comprobantepago
+          uri: lb://ms-registroreserva-comprobantepago
+          predicates:
+            - Path=/api/registroreserva-comprobantepago/**
+          filters:
+            - StripPrefix=1 # Ajustar si es necesario
       discovery:
         locator:
           enabled: true
