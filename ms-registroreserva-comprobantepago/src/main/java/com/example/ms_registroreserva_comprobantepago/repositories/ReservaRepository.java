@@ -12,13 +12,11 @@ import java.util.List;
 
 @Repository
 public interface ReservaRepository extends JpaRepository<ReservaEntity, Long> {
-
-    // Para verificar disponibilidad: karts ocupados en un intervalo de tiempo
-    // Se asume que cada reserva tiene una fechaHora de inicio y una duración
-    // Esta query busca reservas que se solapan con el intervalo [inicioNuevaReserva, finNuevaReserva)
     @Query("SELECT r FROM ReservaEntity r WHERE r.estadoReserva NOT IN ('CANCELADA') AND " +
-            "((r.fechaHora < :finNuevaReserva AND FUNCTION('ADDTIME', r.fechaHora, FUNCTION('MAKETIME', r.duracionHoras, 0, 0)) > :inicioNuevaReserva))")
+            "((r.fechaHora < :finNuevaReserva AND (r.fechaHora + FUNCTION('make_time', r.duracionHoras, 0, 0.0)) > :inicioNuevaReserva))")
     List<ReservaEntity> findReservasSolapadas(@Param("inicioNuevaReserva") LocalDateTime inicioNuevaReserva,
                                               @Param("finNuevaReserva") LocalDateTime finNuevaReserva);
+
+    List<ReservaEntity> findByRutUsuario(String rutUsuario);
 
 }
