@@ -129,6 +129,12 @@ public class ComprobanteService {
         return generarPdfHelper(comprobante, reserva); // Call the helper
     }
 
+    public byte[] generarPdfBytesParaComprobantePorId(Long idComprobante) {
+        ComprobanteEntity comprobante = comprobanteRepository.findById(idComprobante)
+                .orElseThrow(() -> new RuntimeException("Comprobante no encontrado con ID: " + idComprobante));
+        return generarPdfBytesParaComprobante(comprobante.getCodigoComprobante());
+    }
+
     @Transactional // Potentially, if you log the attempt or update a "last_sent_email_attempt" field
     public void enviarEmailConAdjuntoPdf(String codigoComprobante) {
         ComprobanteEntity comprobante = comprobanteRepository.findByCodigoComprobante(codigoComprobante)

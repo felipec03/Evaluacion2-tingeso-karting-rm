@@ -1,9 +1,9 @@
 package com.example.ms_registroreserva_comprobantepago.controllers;
 
-import com.example.ms_registroreserva_comprobantepago.dtos.GenerarComprobanteRequest; // Assuming you created this DTO
+// Assuming you created this DTO
+
 import com.example.ms_registroreserva_comprobantepago.entities.ComprobanteEntity;
 import com.example.ms_registroreserva_comprobantepago.services.ComprobanteService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -21,7 +21,7 @@ public class ComprobanteController {
     @Autowired
     private ComprobanteService comprobanteService;
 
-    @GetMapping
+    @GetMapping("/")
     public ResponseEntity<List<ComprobanteEntity>> getAllComprobantes() {
         List<ComprobanteEntity> comprobantes = comprobanteService.getAllComprobantes();
         return ResponseEntity.ok(comprobantes);
@@ -50,9 +50,13 @@ public class ComprobanteController {
 
     // Endpoint to create the Comprobante entity data
     @PostMapping("/crear/reserva/{idReserva}")
-    public ResponseEntity<?> crearComprobante(@PathVariable Long idReserva, @Valid @RequestBody GenerarComprobanteRequest request) {
+    public ResponseEntity<?> crearComprobante(@PathVariable Long idReserva, @RequestParam String metodoPago) { // Modificado aquí
         try {
-            ComprobanteEntity comprobante = comprobanteService.crearYGuardarComprobante(idReserva, request.getMetodoPago());
+            // Asegúrate que metodoPago no esté vacío si es necesario, puedes añadir validación.
+            if (metodoPago == null || metodoPago.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("El parámetro 'metodoPago' es requerido.");
+            }
+            ComprobanteEntity comprobante = comprobanteService.crearYGuardarComprobante(idReserva, metodoPago); // Modificado aquí
             return new ResponseEntity<>(comprobante, HttpStatus.CREATED);
         } catch (IllegalStateException e) { // Handles "already exists" or "invalid state"
             return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
@@ -65,24 +69,23 @@ public class ComprobanteController {
     }
 
     // Endpoint to get the PDF for an existing comprobante
-    @GetMapping("/{codigoComprobante}/pdf")
-    public ResponseEntity<byte[]> descargarPdfComprobante(@PathVariable String codigoComprobante) {
+    @GetMapping("/id/{idComprobante}/pdf")
+    public ResponseEntity<byte[]> descargarPdfComprobantePorId(@PathVariable Long idComprobante) {
         try {
-            byte[] pdfBytes = comprobanteService.generarPdfBytesParaComprobante(codigoComprobante);
+            byte[] pdfBytes = comprobanteService.generarPdfBytesParaComprobantePorId(idComprobante); // Nuevo método en el servicio
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_PDF);
-            // Suggests to the browser to download the file with the given name
-            headers.setContentDispositionFormData("attachment", "Comprobante-" + codigoComprobante + ".pdf");
+            // Usar "inline" para intentar visualización directa
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"Comprobante-ID-" + idComprobante + ".pdf\"");
 
             return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
         } catch (RuntimeException e) {
-            // Log the error server-side
-            // logger.error("Error al generar PDF para {}: {}", codigoComprobante, e.getMessage());
+            // Considerar loggear el error aquí: logger.error("Error al generar PDF para ID {}: {}", idComprobante, e.getMessage());
             if (e.getMessage() != null && (e.getMessage().contains("Comprobante no encontrado") || e.getMessage().contains("Reserva asociada no encontrada"))) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // Or a JSON error message
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Or a JSON error message
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 

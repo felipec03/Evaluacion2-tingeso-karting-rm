@@ -29,7 +29,7 @@ public class ReservaController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping
+    @PostMapping("/")
     public ResponseEntity<?> crearReserva(@RequestBody ReservaEntity reserva) {
         try {
             ReservaEntity nuevaReserva = reservaService.crearReserva(reserva);
