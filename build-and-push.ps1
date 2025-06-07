@@ -44,6 +44,11 @@ $MICROSERVICES = @(
         Name = "ms-registroreserva-comprobantepago"
         Path = "./ms-registroreserva-comprobantepago"
         Tag = "latest"
+    },
+    @{
+        Name = "ms-racksemanal"
+        Path = "./ms-racksemanal"
+        Tag = "latest"
     }
 )
 

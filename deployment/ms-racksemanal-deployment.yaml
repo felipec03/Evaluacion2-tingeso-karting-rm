@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-racksemanal-deployment
+  labels:
+    app: ms-racksemanal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-racksemanal
+  template:
+    metadata:
+      labels:
+        app: ms-racksemanal
+    spec:
+      containers:
+        - name: ms-racksemanal
+          image: felipec03/ms-racksemanal:latest # Asegúrate de cambiar esto si usas otro repositorio
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "ms-racksemanal"
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:http://config-server-service:8888"
+            - name: SPRING_CLOUD_CONFIG_ENABLED
+              value: "true"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "http://eureka-server-service:8761/eureka/"
+            - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+              value: "true"
+            - name: EUREKA_CLIENT_FETCH_REGISTRY
+              value: "true"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-racksemanal-service
+  labels:
+    app: ms-racksemanal
+spec:
+  selector:
+    app: ms-racksemanal
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: ClusterIP

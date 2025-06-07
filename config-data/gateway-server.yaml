@@ -36,7 +36,13 @@ spring:
           predicates:
             - Path=/api/registroreserva-comprobantepago/**
           filters:
-            - StripPrefix=1 # Ajustar si es necesario
+            - StripPrefix=1
+        - id: ms-racksemanal
+          uri: lb://ms-racksemanal
+          predicates:
+            - Path=/ms-racksemanal/**
+          filters:
+            - StripPrefix=1
       discovery:
         locator:
           enabled: true
