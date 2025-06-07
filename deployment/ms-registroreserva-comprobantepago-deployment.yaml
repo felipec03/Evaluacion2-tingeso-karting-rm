@@ -18,13 +18,12 @@ spec:
         - name: ms-registroreserva-comprobantepago
           image: felipec03/ms-registroreserva-comprobantepago:latest 
           ports:
-            - containerPort: 8080 # Puerto interno que la app podría usar por defecto antes de que Eureka asigne uno dinámico.
-                                  # El targetPort del Service debe coincidir.
+            - containerPort: 8080 
           env:
             - name: SPRING_APPLICATION_NAME
-              value: "ms-registroreserva-comprobantepago" # Coincide con el nombre en Eureka y Config Server
+              value: "ms-registroreserva-comprobantepago" 
             - name: SPRING_CONFIG_IMPORT
-              value: "configserver:http://config-server-service:8888" # URL del Config Server service
+              value: "configserver:http://config-server-service:8888"
             - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
               value: "http://eureka-server-service:8761/eureka/"
             - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
@@ -32,25 +31,19 @@ spec:
             - name: EUREKA_CLIENT_FETCH_REGISTRY
               value: "true"
             - name: SPRING_PROFILES_ACTIVE
-              value: "kubernetes" # O "default" si no usas perfiles específicos en K8s
-            # Variables para la base de datos, tomadas del ConfigMap
+              value: "kubernetes"
             - name: SPRING_DATASOURCE_URL
               valueFrom:
                 configMapKeyRef:
                   name: app-configmap
-                  key: SPRING_DATASOURCE_URL_MS5 # La clave que definimos en app-configmap
+                  key: SPRING_DATASOURCE_URL_MS5
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:
                   name: app-configmap
-                  key: SPRING_DATASOURCE_USERNAME # Clave compartida para el usuario
+                  key: SPRING_DATASOURCE_USERNAME 
             - name: SPRING_DATASOURCE_PASSWORD
-              valueFrom: # O usa value: "tu_password_aqui" si no está en ConfigMap y no quieres usar Secrets por ahora
-                configMapKeyRef:
-                  name: app-configmap
-                  key: SPRING_DATASOURCE_PASSWORD
-                  value: "postgres"
-                                                  
+              value: "postgres"                           
 ---
 apiVersion: v1
 kind: Service
@@ -63,8 +56,5 @@ spec:
     app: ms-registroreserva-comprobantepago
   ports:
     - protocol: TCP
-      port: 8080      # Puerto que expone este Service internamente en el cluster
-      targetPort: 8080 # Puerto en el que la aplicación dentro del Pod está escuchando (debe coincidir con containerPort o el puerto real de la app)
-                      # Aunque server.port=0, Spring Boot suele arrancar en 8080 por defecto si no hay otra config.
-                      # Eureka manejará el puerto dinámico para el registro, pero el Service necesita un targetPort fijo.
-  type: ClusterIP     # Solo accesible dentro del cluster
+      port: 8080      
+      targetPort: 8080

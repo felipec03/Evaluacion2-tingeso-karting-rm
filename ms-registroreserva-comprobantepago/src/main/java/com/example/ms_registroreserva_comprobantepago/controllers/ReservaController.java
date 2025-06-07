@@ -16,7 +16,7 @@ public class ReservaController {
     @Autowired
     private ReservaService reservaService;
 
-    @GetMapping
+    @GetMapping("/")
     public ResponseEntity<List<ReservaEntity>> getAllReservas() {
         List<ReservaEntity> reservas = reservaService.getAllReservas();
         return ResponseEntity.ok(reservas);
