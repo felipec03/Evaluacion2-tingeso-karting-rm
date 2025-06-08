@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.List;
 
-@FeignClient(name = "ms-registroreserva-comprobantepago", path = "/reserva")
+@FeignClient(name = "ms-registroreserva-comprobantepago", path = "/api/reservas")
 public interface ReservaClient {
 
-    @GetMapping
+    @GetMapping("/")
     ResponseEntity<List<Reserva>> getAllReservas();
 
     @GetMapping("/{id}")
