@@ -20,50 +20,87 @@ public class ReporteService {
     private RegistroReservaFeignClient reservaFeignClient;
 
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
-    private static final List<String> RANGOS_PERSONAS_DEFINIDOS = List.of("1-3 Personas", "4-6 Personas", "7-9 Personas"); // Y más si es necesario
+    private static final List<String> RANGOS_PERSONAS_DEFINIDOS = List.of("1-3 Personas", "4-6 Personas", "7-9 Personas");
+
+    // As per requirement: "10, 15 o 20 vueltas"
+    // These are the "defined in the system" vuelta-based tariffs.
+    private static final List<String> PREDEFINED_VUELTA_TARIFAS_DESCRIPTIONS = List.of("10 Vueltas", "15 Vueltas", "20 Vueltas");
+
+    /**
+     * Derives the tariff category string from a ReservaDTO.
+     * This logic needs to align with how 'tipoReserva' and 'duracionMinutos'
+     * define the tariff types in the system (e.g., ms-tarifasconfig or business rules).
+     */
+    private String getReportTariffCategory(ReservaDTO reserva) {
+        if (reserva.getDuracionMinutos() != null && reserva.getDuracionMinutos() > 0) {
+            return reserva.getDuracionMinutos() + " Minutos";
+        }
+
+        // This mapping is an EXAMPLE. It MUST be validated against your system's actual logic
+        // for how 'tipoReserva' (integer) maps to the descriptive vuelta counts.
+        // If 'tipoReserva' directly implies a specific vuelta count (e.g., from ms-tarifasconfig),
+        // that logic should be replicated or fetched.
+        return switch (reserva.getTipoReserva()) {
+            case 1 -> // Assuming tipoReserva 1 maps to "10 Vueltas"
+                    "10 Vueltas";
+            case 2 -> // Assuming tipoReserva 2 maps to "15 Vueltas"
+                    "15 Vueltas";
+            case 3 -> // Assuming tipoReserva 3 maps to "20 Vueltas"
+                    "20 Vueltas";
+            // Add more cases if other tipoReserva values map to specific vuelta counts
+            default ->
+                // If it's not time-based and doesn't map to a predefined vuelta count,
+                // it's an undefined or other category.
+                    "Tarifa por Vueltas (Otro)"; // Or handle as "Desconocida"
+        };
+    }
 
     public ReporteResponseDTO generarReporteIngresosPorTarifa(int anioInicio, int mesInicio, int anioFin, int mesFin) {
         List<ReservaDTO> todasLasReservas = reservaFeignClient.obtenerTodasLasReservas();
         if (todasLasReservas == null) {
-            todasLasReservas = new ArrayList<>(); // Evitar NullPointerException
+            todasLasReservas = new ArrayList<>();
         }
 
         LocalDate fechaInicioReporte = LocalDate.of(anioInicio, mesInicio, 1);
         LocalDate fechaFinReporte = LocalDate.of(anioFin, mesFin, 1).withDayOfMonth(LocalDate.of(anioFin, mesFin, 1).lengthOfMonth());
 
-        List<ReservaDTO> reservasFiltradas = todasLasReservas.stream()
-                .filter(r -> r.getFechaReserva() != null &&
-                        !r.getFechaReserva().isBefore(fechaInicioReporte) &&
-                        !r.getFechaReserva().isAfter(fechaFinReporte))
-                .collect(Collectors.toList());
+        List<ReservaDTO> reservasProcesables = todasLasReservas.stream()
+                .filter(r -> "PAGADA".equalsIgnoreCase(r.getEstadoReserva()))
+                .filter(r -> r.getFechaHora() != null && r.getMontoFinal() != null && r.getMontoFinal() > 0) // Ensure essential data is present
+                .filter(r -> {
+                    LocalDate fechaReserva = r.getFechaHora().toLocalDate();
+                    return !fechaReserva.isBefore(fechaInicioReporte) && !fechaReserva.isAfter(fechaFinReporte);
+                })
+                .toList();
 
         List<String> mesesDelRango = obtenerMesesEnRango(fechaInicioReporte, fechaFinReporte);
 
-        // Agrupar por tipo de tarifa y luego por mes
-        Map<String, Map<String, Double>> ingresosPorTarifaYMes = reservasFiltradas.stream()
+        Map<String, Map<String, Double>> ingresosPorTarifaYMes = reservasProcesables.stream()
                 .collect(Collectors.groupingBy(
-                        ReservaDTO::getTipoTarifa,
+                        this::getReportTariffCategory, // Use the derivation method
                         Collectors.groupingBy(
-                                r -> YearMonth.from(r.getFechaReserva()).format(MONTH_FORMATTER),
-                                Collectors.summingDouble(ReservaDTO::getMontoTotal)
+                                r -> YearMonth.from(r.getFechaHora().toLocalDate()).format(MONTH_FORMATTER),
+                                Collectors.summingDouble(ReservaDTO::getMontoFinal)
                         )
                 ));
 
-        // Obtener todos los tipos de tarifa únicos de las reservas filtradas
-        // Para cumplir "Todos los tipos ... definidos en el sistema se deben mostrar":
-        // Si hay tipos de tarifa que no tuvieron reservas, no aparecerán aquí.
-        // Una mejora sería tener una lista de todos los tipos de tarifa posibles (desde config o BD).
-        Set<String> todosLosTiposTarifa = reservasFiltradas.stream()
-                .map(ReservaDTO::getTipoTarifa)
+        // To meet "Todos los tipos ... definidos en el sistema se deben mostrar":
+        // Start with predefined vuelta-based tariffs.
+        Set<String> categoriasTarifaParaReporte = new LinkedHashSet<>(PREDEFINED_VUELTA_TARIFAS_DESCRIPTIONS);
+
+        // Add any dynamically found time-based tariffs (e.g., "35 Minutos", "40 Minutos")
+        // and any other derived categories from the actual data.
+        reservasProcesables.stream()
+                .map(this::getReportTariffCategory)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-        // Si se quiere asegurar que todos los tipos de tarifa definidos aparezcan, incluso con 0:
-        // Set<String> todosLosTiposTarifa = new HashSet<>(Arrays.asList("10 Vueltas", "15 Vueltas", "20 Vueltas", "30 Minutos", "60 Minutos"));
-        // O obtenerlos de una configuración o de otro endpoint.
+                .forEach(categoriasTarifaParaReporte::add);
 
         List<ReporteFilaDTO> filasReporte = new ArrayList<>();
-        for (String tipoTarifa : todosLosTiposTarifa.stream().sorted().collect(Collectors.toList())) { // Ordenar alfabéticamente
-            Map<String, Double> ingresosMes = new LinkedHashMap<>(); // Usar LinkedHashMap para mantener el orden de los meses
+        // Sort categories for consistent report output (optional, but good)
+        List<String> sortedCategorias = categoriasTarifaParaReporte.stream().sorted().toList();
+
+        for (String tipoTarifa : sortedCategorias) {
+            Map<String, Double> ingresosMes = new LinkedHashMap<>();
             double totalCategoria = 0.0;
             for (String mes : mesesDelRango) {
                 double ingresoMes = ingresosPorTarifaYMes.getOrDefault(tipoTarifa, Collections.emptyMap()).getOrDefault(mes, 0.0);
@@ -85,26 +122,29 @@ public class ReporteService {
         LocalDate fechaInicioReporte = LocalDate.of(anioInicio, mesInicio, 1);
         LocalDate fechaFinReporte = LocalDate.of(anioFin, mesFin, 1).withDayOfMonth(LocalDate.of(anioFin, mesFin, 1).lengthOfMonth());
 
-        List<ReservaDTO> reservasFiltradas = todasLasReservas.stream()
-                .filter(r -> r.getFechaReserva() != null &&
-                        !r.getFechaReserva().isBefore(fechaInicioReporte) &&
-                        !r.getFechaReserva().isAfter(fechaFinReporte))
-                .collect(Collectors.toList());
+        List<ReservaDTO> reservasProcesables = todasLasReservas.stream()
+                .filter(r -> "PAGADA".equalsIgnoreCase(r.getEstadoReserva()))
+                .filter(r -> r.getFechaHora() != null && r.getMontoFinal() != null && r.getMontoFinal() > 0) // Ensure essential data
+                .filter(r -> {
+                    LocalDate fechaReserva = r.getFechaHora().toLocalDate();
+                    return !fechaReserva.isBefore(fechaInicioReporte) && !fechaReserva.isAfter(fechaFinReporte);
+                })
+                .toList();
 
         List<String> mesesDelRango = obtenerMesesEnRango(fechaInicioReporte, fechaFinReporte);
 
-        // Agrupar por rango de personas y luego por mes
-        Map<String, Map<String, Double>> ingresosPorRangoPersonasYMes = reservasFiltradas.stream()
-                .filter(r -> getRangoPersonas(r.getNumeroPersonas()) != null) // Filtrar si no cae en ningún rango
+        Map<String, Map<String, Double>> ingresosPorRangoPersonasYMes = reservasProcesables.stream()
+                .filter(r -> getRangoPersonas(r.getCantidadPersonas()) != null)
                 .collect(Collectors.groupingBy(
-                        r -> getRangoPersonas(r.getNumeroPersonas()),
+                        r -> getRangoPersonas(r.getCantidadPersonas()),
                         Collectors.groupingBy(
-                                r -> YearMonth.from(r.getFechaReserva()).format(MONTH_FORMATTER),
-                                Collectors.summingDouble(ReservaDTO::getMontoTotal)
+                                r -> YearMonth.from(r.getFechaHora().toLocalDate()).format(MONTH_FORMATTER),
+                                Collectors.summingDouble(ReservaDTO::getMontoFinal)
                         )
                 ));
 
         List<ReporteFilaDTO> filasReporte = new ArrayList<>();
+        // RANGOS_PERSONAS_DEFINIDOS are fixed as per requirement
         for (String rangoPersonas : RANGOS_PERSONAS_DEFINIDOS) {
             Map<String, Double> ingresosMes = new LinkedHashMap<>();
             double totalCategoria = 0.0;
@@ -115,24 +155,22 @@ public class ReporteService {
             }
             filasReporte.add(new ReporteFilaDTO(rangoPersonas, ingresosMes, totalCategoria));
         }
-
         return construirReporteResponse(filasReporte, mesesDelRango);
     }
 
     private ReporteResponseDTO construirReporteResponse(List<ReporteFilaDTO> filasReporte, List<String> mesesDelRango) {
-        Map<String, Double> totalesPorMes = new LinkedHashMap<>();
+        Map<String, Double> totalesPorMes = new LinkedHashMap<>(); // Use LinkedHashMap to maintain month order
         double granTotal = 0.0;
 
         for (String mes : mesesDelRango) {
-            double totalMes = 0.0;
+            double totalMesColumna = 0.0;
             for (ReporteFilaDTO fila : filasReporte) {
-                totalMes += fila.getIngresosPorMes().getOrDefault(mes, 0.0);
+                totalMesColumna += fila.getIngresosPorMes().getOrDefault(mes, 0.0);
             }
-            totalesPorMes.put(mes, totalMes);
-            granTotal += totalMes;
+            totalesPorMes.put(mes, totalMesColumna);
         }
-        // El granTotal también se puede calcular sumando los totales de categoría
-        // granTotal = filasReporte.stream().mapToDouble(ReporteFilaDTO::getTotalIngresosCategoria).sum();
+        // Calculate grand total from the sum of category totals for accuracy
+        granTotal = filasReporte.stream().mapToDouble(ReporteFilaDTO::getTotalIngresosCategoria).sum();
 
         return new ReporteResponseDTO(mesesDelRango, filasReporte, totalesPorMes, granTotal);
     }
@@ -149,18 +187,14 @@ public class ReporteService {
         return meses;
     }
 
-    private String getRangoPersonas(int numeroPersonas) {
-        if (numeroPersonas >= 1 && numeroPersonas <= 3) {
+    private String getRangoPersonas(int cantidadPersonas) {
+        if (cantidadPersonas >= 1 && cantidadPersonas <= 3) {
             return "1-3 Personas";
-        } else if (numeroPersonas >= 4 && numeroPersonas <= 6) {
+        } else if (cantidadPersonas >= 4 && cantidadPersonas <= 6) {
             return "4-6 Personas";
-        } else if (numeroPersonas >= 7 && numeroPersonas <= 9) {
+        } else if (cantidadPersonas >= 7 && cantidadPersonas <= 9) {
             return "7-9 Personas";
         }
-        // Añadir más rangos si es necesario
-        // else if (numeroPersonas >= 10 && numeroPersonas <= 12) {
-        //     return "10-12 Personas";
-        // }
-        return null; // O un rango "Otros" si se prefiere
+        return null; // Or a default category like "Otros"
     }
 }

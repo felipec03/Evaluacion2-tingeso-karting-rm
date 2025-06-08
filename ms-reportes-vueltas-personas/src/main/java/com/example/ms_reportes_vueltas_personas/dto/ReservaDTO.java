@@ -4,16 +4,25 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReservaDTO {
-    private Long id; // O el tipo de ID que use
-    private LocalDate fechaReserva;
-    private String tipoTarifa; // Ej: "10 Vueltas", "15 Vueltas", "30 Minutos"
-    private int numeroPersonas;
-    private double montoTotal; // Ingreso de esta reserva
-    // Otros campos que puedan venir y no necesitemos para los reportes
+    private Long id;
+    private LocalDateTime fechaHora;        // Corresponds to ReservaEntity.fechaHora
+    private int tipoReserva;                // Corresponds to ReservaEntity.tipoReserva
+    private int cantidadPersonas;           // Corresponds to ReservaEntity.cantidadPersonas
+    // private int cantidadCumple;          // Available in Entity, can be added if future reports need it
+    // private String nombreUsuario;        // Available, not used in current reports
+    // private String rutUsuario;           // Available, not used
+    // private String emailUsuario;         // Available, not used
+    // private String telefonoUsuario;      // Available, not used
+    // private Double montoBase;            // Available, not used directly for income sum
+    // private Double porcentajeDescuentoAplicado; // Available, not used
+    // private Double montoDescuento;       // Available, not used
+    private Double montoFinal;              // Corresponds to ReservaEntity.montoFinal (use Double for null safety)
+    private String estadoReserva;           // Corresponds to ReservaEntity.estadoReserva
+    private Integer duracionMinutos;        // Corresponds to ReservaEntity.duracionMinutos (use Integer for null safety)
 }
