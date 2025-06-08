@@ -20,7 +20,7 @@ public class ReporteService {
     private RegistroReservaFeignClient reservaFeignClient;
 
     private static final DateTimeFormatter MONTH_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
-    private static final List<String> RANGOS_PERSONAS_DEFINIDOS = List.of("1-3 Personas", "4-6 Personas", "7-9 Personas");
+    private static final List<String> RANGOS_PERSONAS_DEFINIDOS = List.of("1-2 Personas", "3-5 Personas", "6-10 Personas", "11-15 Personas");
 
     // As per requirement: "10, 15 o 20 vueltas"
     // These are the "defined in the system" vuelta-based tariffs.
@@ -188,13 +188,15 @@ public class ReporteService {
     }
 
     private String getRangoPersonas(int cantidadPersonas) {
-        if (cantidadPersonas >= 1 && cantidadPersonas <= 3) {
-            return "1-3 Personas";
-        } else if (cantidadPersonas >= 4 && cantidadPersonas <= 6) {
-            return "4-6 Personas";
-        } else if (cantidadPersonas >= 7 && cantidadPersonas <= 9) {
-            return "7-9 Personas";
+        if (cantidadPersonas >= 1 && cantidadPersonas <= 2) {
+            return "1-2 Personas";
+        } else if (cantidadPersonas >= 3 && cantidadPersonas <= 5) {
+            return "3-5 Personas";
+        } else if (cantidadPersonas >= 6 && cantidadPersonas <= 10) {
+            return "6-10 Personas";
+        } else if (cantidadPersonas >= 11 && cantidadPersonas <= 15) {
+            return "11-15 Personas";
         }
-        return null; // Or a default category like "Otros"
+        return null;
     }
 }
