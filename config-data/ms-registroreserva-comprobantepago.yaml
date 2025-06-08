@@ -5,10 +5,9 @@ spring:
   application:
     name: ms-registroreserva-comprobantepago
   datasource:
-    # Estas variables serán tomadas del entorno del Pod, que a su vez las toma del ConfigMap
-    url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
-    password: ${SPRING_DATASOURCE_PASSWORD} # La contraseña real vendrá del deployment/ConfigMap
+    url: ${SPRING_DATASOURCE_URL_MS5}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

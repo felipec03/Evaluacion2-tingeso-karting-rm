@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: ms-racksemanal
-          image: felipec03/ms-racksemanal:latest # Asegúrate de cambiar esto si usas otro repositorio
+          image: felipec03/ms-racksemanal:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -35,6 +35,21 @@ spec:
               value: "true"
             - name: SPRING_PROFILES_ACTIVE
               value: "kubernetes"
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: SPRING_DATASOURCE_URL_MS6
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-configmap
+                  key: SPRING_DATASOURCE_USERNAME
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: SPRING_DATASOURCE_PASSWORD
 ---
 apiVersion: v1
 kind: Service
