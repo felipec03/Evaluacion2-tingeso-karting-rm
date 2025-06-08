@@ -8,9 +8,8 @@ import java.util.List;
 
 // Si usas Eureka: @FeignClient(name = "ms-registroreserva-comprobante")
 // Si no usas Eureka y especificas URL en properties:
-@FeignClient(name = "ms-registroreserva-comprobante", url = "${app.feign.client.ms-registroreserva-comprobante.url}")
+@FeignClient(name = "ms-registroreserva-comprobantepago", path = "/api/reservas")
 public interface RegistroReservaFeignClient {
-    @GetMapping("/api/reservas/")
+    @GetMapping("/")
     List<ReservaDTO> obtenerTodasLasReservas();
-
 }

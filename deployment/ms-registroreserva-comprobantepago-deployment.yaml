@@ -17,7 +17,7 @@ spec:
       containers:
         - name: ms-registroreserva-comprobantepago
           image: felipec03/ms-registroreserva-comprobantepago:latest 
-          imagePullPolicy: Always # ¡Muy importante si usas el tag 'latest'!
+          imagePullPolicy: Always 
 
           ports:
             - containerPort: 8080 
