@@ -1,0 +1,19 @@
+server:
+  port: 0 # Puerto dinámico, Eureka se encargará
+
+spring:
+  application:
+    name: ms-reportes-vueltas-personas
+  # Excluir la autoconfiguración de DataSource ya que este MS no usa BD directamente
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+eureka:
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://eureka-server-service:8761/eureka/}
