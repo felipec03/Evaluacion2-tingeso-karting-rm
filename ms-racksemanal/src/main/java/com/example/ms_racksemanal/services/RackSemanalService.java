@@ -6,11 +6,12 @@ import com.example.ms_racksemanal.model.Reserva;
 import com.example.ms_racksemanal.repositories.RackSemanalRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.format.TextStyle;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -50,47 +51,82 @@ public class RackSemanalService {
     /**
      * Actualiza el rack semanal con las reservas existentes
      */
+
     public void actualizarRackSemanal() {
-        // Primero reseteamos todas las celdas (ninguna reservada)
-        List<RackSemanal> todasCeldas = rackSemanalRepository.findAll();
-        for (RackSemanal celda : todasCeldas) {
+        // Reset all cells first
+        List<RackSemanal> celdasRack = rackSemanalRepository.findAll();
+        for (RackSemanal celda : celdasRack) {
             celda.setReservado(false);
             celda.setReservaId(null);
+            rackSemanalRepository.save(celda);
         }
-        rackSemanalRepository.saveAll(todasCeldas);
 
-        // Obtenemos todas las reservas
-        List<Reserva> reservas = reservaClient.getAllReservas().getBody();
+        // Get all reservations
+        ResponseEntity<List<Reserva>> response = reservaClient.getAllReservas();
+        List<Reserva> reservas = response.getBody();
+
         if (reservas == null || reservas.isEmpty()) {
-            log.info("No hay reservas para actualizar en el rack semanal");
+            log.warn("No se encontraron reservas para actualizar el rack");
             return;
         }
 
-        // Marcamos las celdas correspondientes a reservas como ocupadas
+        // Debug logging
+        log.info("Obtenidas {} reservas para actualizar el rack", reservas.size());
+
         for (Reserva reserva : reservas) {
-            // Solo procesamos reservas activas o confirmadas
-            if (!"CANCELADA".equals(reserva.getEstado())) {
-                // Obtenemos el día de la semana de la fecha de la reserva
-                LocalDate fecha = reserva.getFechaHora();
-                DayOfWeek dayOfWeek = fecha.getDayOfWeek();
-                String diaSemana = dayOfWeek.getDisplayName(TextStyle.FULL, new Locale("es", "ES"));
-                diaSemana = diaSemana.substring(0, 1).toUpperCase() + diaSemana.substring(1);
+            if (reserva == null || "CANCELADA".equals(reserva.getEstadoReserva())) {
+                continue;
+            }
 
-                // Formateamos la hora de inicio y fin para obtener el bloque
-                String bloqueTiempo = reserva.getHoraInicio().toString().substring(0, 5) + "-" +
-                        reserva.getHoraFin().toString().substring(0, 5);
+            if (reserva.getFechaHora() == null) {
+                log.warn("Reserva ID {} tiene fechaHora nula", reserva.getId());
+                continue;
+            }
 
-                // Buscamos la celda correspondiente
+            try {
+                // Extract date part from LocalDateTime
+                LocalDate fecha = reserva.getFechaHora().toLocalDate();
+                String diaSemana = obtenerNombreDiaSemana(fecha);
+
+                // Calculate time block from fechaHora and duracionMinutos
+                LocalDateTime inicio = reserva.getFechaHora();
+                LocalDateTime fin = inicio.plusMinutes(reserva.getDuracionMinutos());
+
+                String bloqueTiempo = String.format("%02d:%02d-%02d:%02d",
+                        inicio.getHour(), inicio.getMinute(),
+                        fin.getHour(), fin.getMinute());
+
+                log.info("Procesando reserva ID {}: dia={}, bloque={}",
+                        reserva.getId(), diaSemana, bloqueTiempo);
+
+                // Find and update the cell
                 RackSemanal celda = rackSemanalRepository.findByDiaSemanaAndBloqueTiempo(diaSemana, bloqueTiempo);
                 if (celda != null) {
                     celda.setReservado(true);
                     celda.setReservaId(reserva.getId());
                     rackSemanalRepository.save(celda);
-                    log.info("Celda actualizada: {} {} - Reserva: {}", diaSemana, bloqueTiempo, reserva.getId());
+                    log.info("Celda actualizada: {}", celda);
+                } else {
+                    log.warn("No se encontró celda para día {} y bloque {}", diaSemana, bloqueTiempo);
                 }
+            } catch (Exception e) {
+                log.error("Error procesando reserva ID {}: {}", reserva.getId(), e.getMessage(), e);
             }
         }
-        log.info("Rack semanal actualizado correctamente con {} reservas", reservas.size());
+    }
+
+    // Helper method to get day name in Spanish
+    private String obtenerNombreDiaSemana(LocalDate fecha) {
+        DayOfWeek dayOfWeek = fecha.getDayOfWeek();
+        return switch (dayOfWeek) {
+            case MONDAY -> "Lunes";
+            case TUESDAY -> "Martes";
+            case WEDNESDAY -> "Miércoles";
+            case THURSDAY -> "Jueves";
+            case FRIDAY -> "Viernes";
+            case SATURDAY -> "Sábado";
+            case SUNDAY -> "Domingo";
+        };
     }
 
     /**
