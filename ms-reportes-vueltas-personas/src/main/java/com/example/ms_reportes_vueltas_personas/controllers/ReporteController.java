@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 @RestController
-@RequestMapping("/api/v1/reportes")
+@RequestMapping("/api/reportes")
 public class ReporteController {
 
     @Autowired

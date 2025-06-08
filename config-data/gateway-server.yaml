@@ -46,9 +46,9 @@ spring:
         - id: ms-reportes-vueltas-personas
           uri: lb://ms-reportes-vueltas-personas
           predicates:
-            - Path=/ms-reportes-vueltas-personas/** 
+            - Path=/ms-reportes-vueltas-personas/**
           filters:
-            - StripPrefix=1
+            - StripPrefix=1 
       discovery:
         locator:
           enabled: true
