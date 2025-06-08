@@ -14,7 +14,7 @@ public class Reserva {
     private Long id;
     private String nombreCliente;
     private String rutCliente;
-    private LocalDate fecha;
+    private LocalDate fechaHora;
     private LocalTime horaInicio;
     private LocalTime horaFin;
     private String estado;

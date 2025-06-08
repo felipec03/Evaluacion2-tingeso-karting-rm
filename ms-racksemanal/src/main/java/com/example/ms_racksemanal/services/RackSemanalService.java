@@ -71,7 +71,7 @@ public class RackSemanalService {
             // Solo procesamos reservas activas o confirmadas
             if (!"CANCELADA".equals(reserva.getEstado())) {
                 // Obtenemos el día de la semana de la fecha de la reserva
-                LocalDate fecha = reserva.getFecha();
+                LocalDate fecha = reserva.getFechaHora();
                 DayOfWeek dayOfWeek = fecha.getDayOfWeek();
                 String diaSemana = dayOfWeek.getDisplayName(TextStyle.FULL, new Locale("es", "ES"));
                 diaSemana = diaSemana.substring(0, 1).toUpperCase() + diaSemana.substring(1);
