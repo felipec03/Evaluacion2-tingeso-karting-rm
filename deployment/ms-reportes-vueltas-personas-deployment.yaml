@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-reportes-vueltas-personas-deployment
+  labels:
+    app: ms-reportes-vueltas-personas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-reportes-vueltas-personas
+  template:
+    metadata:
+      labels:
+        app: ms-reportes-vueltas-personas
+    spec:
+      containers:
+        - name: ms-reportes-vueltas-personas
+          image: felipec03/ms-reportes-vueltas-personas:latest # REEMPLAZA CON TU IMAGEN REAL
+          imagePullPolicy: Always # O IfNotPresent si usas el docker-env de minikube y la imagen es local
+          ports:
+            - containerPort: 8080 # Puerto que expone el Dockerfile
+          env:
+            - name: SPRING_APPLICATION_NAME
+              value: "ms-reportes-vueltas-personas"
+            - name: SPRING_CONFIG_IMPORT
+              value: "configserver:${CONFIG_SERVER_URL:http://config-server-service:8888}"
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              value: "${EUREKA_SERVER_URL:http://eureka-server-service:8761/eureka/}"
+            - name: EUREKA_CLIENT_REGISTER_WITH_EUREKA
+              value: "true"
+            - name: EUREKA_CLIENT_FETCH_REGISTRY
+              value: "true"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "kubernetes" 
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-reportes-vueltas-personas-service
+  labels:
+    app: ms-reportes-vueltas-personas
+spec:
+  selector:
+    app: ms-reportes-vueltas-personas
+  ports:
+    - protocol: TCP
+      port: 8080 
+      targetPort: 8080 
+  type: ClusterIP 

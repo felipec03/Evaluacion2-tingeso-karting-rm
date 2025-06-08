@@ -49,6 +49,11 @@ $MICROSERVICES = @(
         Name = "ms-racksemanal"
         Path = "./ms-racksemanal"
         Tag = "latest"
+    },
+    @{
+        Name = "ms-reportes-vueltas-personas"
+        Path = "./ms-reportes-vueltas-personas"
+        Tag = "latest"
     }
 )
 

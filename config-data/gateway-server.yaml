@@ -34,13 +34,19 @@ spring:
         - id: ms-registroreserva-comprobantepago
           uri: lb://ms-registroreserva-comprobantepago
           predicates:
-            - Path=/api/registroreserva-comprobantepago/**
+            - Path=/registroreserva-comprobantepago/**
           filters:
             - StripPrefix=1
         - id: ms-racksemanal
           uri: lb://ms-racksemanal
           predicates:
             - Path=/ms-racksemanal/**
+          filters:
+            - StripPrefix=1
+        - id: ms-reportes-vueltas-personas
+          uri: lb://ms-reportes-vueltas-personas
+          predicates:
+            - Path=/ms-reportes-vueltas-personas/** 
           filters:
             - StripPrefix=1
       discovery:
