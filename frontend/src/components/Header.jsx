@@ -25,10 +25,7 @@ const Header = () => {
                             <Link className="nav-link" to="/agregar-reserva">Nueva Reserva</Link>
                         </li>
                         <li className="nav-item">
-                            <Link className="nav-link" to="/pilotos">Pilotos</Link>
-                        </li>
-                        <li className="nav-item">
-                            <Link className="nav-link" to="/karts">Karts</Link>
+                            <Link className="nav-link fw-bold py-1 px-0" to="/comprobantes">Comprobantes</Link>
                         </li>
                         <li className="nav-item">
                             <Link className="nav-link" to="/reportes">Reportes</Link>

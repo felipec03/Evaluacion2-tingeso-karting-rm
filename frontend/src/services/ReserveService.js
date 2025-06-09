@@ -13,7 +13,7 @@ class ReserveService {
     }
 
     createReserve(reserveData) {
-        return axios.post(`${API_URL}`, reserveData);
+        return axios.post(`${API_URL}/`, reserveData);
     }
 
     updateReserve(id, reserveData) {
@@ -30,10 +30,6 @@ class ReserveService {
 
     getReservesByDate(date) {
         return axios.get(`${API_URL}/fecha/${date}`);
-    }
-
-    calculatePrice(reserveData) {
-        return axios.post(`${API_URL}/calcular-total`, reserveData);
     }
 }
 

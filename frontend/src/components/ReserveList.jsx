@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import './ReserveList.css';
 import ReserveService from '../services/ReserveService';
 
 const ReserveList = () => {
-  const [reservas, setReservas] = useState([]);
+  const [reservas, setReservas] = useState([]); // Changed back to reservas
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -14,15 +13,14 @@ const ReserveList = () => {
     const fetchReservas = async () => {
       try {
         setLoading(true);
-        // Usar la URL correcta con la ruta base adecuada
         const response = await ReserveService.getAllReserves();
-        console.log('Respuesta API:', response.data);
+        console.log('Respuesta API (Reservas):', response.data);
         
-        const reservasData = Array.isArray(response.data) 
+        const data = Array.isArray(response.data) 
           ? response.data 
-          : response.data.content || response.data.reservas || [];
+          : response.data.content || []; // Adjusted fallback
         
-        setReservas(reservasData);
+        setReservas(data);
         setLoading(false);
       } catch (err) {
         console.error('Error al cargar reservas:', err);
@@ -34,40 +32,30 @@ const ReserveList = () => {
     fetchReservas();
   }, []);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES');
+  const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return 'N/A';
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('es-ES', { 
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit' 
+    });
   };
 
-  const formatTime = (startTime, endTime) => {
-    if (!startTime || !endTime) return 'N/A';
-    
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-    
-    const formatOptions = { hour: '2-digit', minute: '2-digit', hour12: false };
-    return `${start.toLocaleTimeString('es-ES', formatOptions)} - ${end.toLocaleTimeString('es-ES', formatOptions)}`;
-  };
-  
-  // Función para convertir tipo de reserva a texto legible
-  const getTipoReserva = (tipo) => {
-    switch(tipo) {
-      case 1: return 'Normal (10 vueltas)';
-      case 2: return 'Extendida (15 vueltas)';
-      case 3: return 'Premium (20 vueltas)';
-      default: return `Tipo ${tipo}`;
+  const getTipoReservaDescription = (tipo) => {
+    switch (tipo) {
+      case 1: return '10 vueltas';
+      case 2: return '15 vueltas';
+      case 3: return '20 vueltas';
+      default: return 'Desconocido';
     }
   };
 
-  const handleDelete = (id) => {
-    // Confirmar antes de eliminar
+  const handleDelete = (idReserva) => {
     if (window.confirm('¿Está seguro que desea eliminar esta reserva?')) {
-      console.log(`Eliminando reserva con ID: ${id}`);
-      ReserveService.deleteReserve(id)
+      console.log(`Intentando eliminar reserva con ID: ${idReserva}`);
+      ReserveService.deleteReserve(idReserva)
         .then(() => {
-          // Actualizar la lista de reservas después de eliminar
-          setReservas(reservas.filter(reserva => reserva.id !== id));
+          setReservas(prevReservas => prevReservas.filter(reserva => reserva.id !== idReserva));
         })
         .catch(err => {
           console.error('Error al eliminar reserva:', err);
@@ -99,12 +87,13 @@ const ReserveList = () => {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Cliente</th>
-              <th>Tipo de Reserva</th>
-              <th>Fecha</th>
-              <th>Hora</th>
+              <th>Fecha y Hora</th>
+              <th>Tipo</th>
               <th>Personas</th>
-              <th>Total</th>
+              <th>Cliente</th>
+              <th>Email</th>
+              <th>Monto Final</th>
+              <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -112,12 +101,13 @@ const ReserveList = () => {
             {reservas.map((reserva) => (
               <tr key={reserva.id}>
                 <td>{reserva.id}</td>
-                <td>{reserva.emailarrendatario || 'N/A'}</td>
-                <td>{getTipoReserva(reserva.tiporeserva)}</td>
-                <td>{formatDate(reserva.fecha)}</td>
-                <td>{formatTime(reserva.inicio_reserva, reserva.fin_reserva)}</td>
-                <td>{reserva.numero_personas}</td>
-                <td>${reserva.totalConIva?.toLocaleString('es-CL') || 'N/A'}</td>
+                <td>{formatDateTime(reserva.fechaHora)}</td>
+                <td>{getTipoReservaDescription(reserva.tipoReserva)}</td>
+                <td>{reserva.cantidadPersonas}</td>
+                <td>{reserva.nombreUsuario || 'N/A'}</td>
+                <td>{reserva.emailUsuario || 'N/A'}</td>
+                <td>${reserva.montoFinal?.toLocaleString('es-CL') || 'N/A'}</td>
+                <td>{reserva.estadoReserva || 'N/A'}</td>
                 <td>
                   <button 
                     className="btn btn-delete" 

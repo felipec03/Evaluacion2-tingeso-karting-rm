@@ -1,23 +1,32 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_COMPROBANTE_API_URL;
+const API_BASE_URL = '/api/comprobantes'; // Adjusted to match gateway pattern
+
 class ComprobanteService {
     getAllComprobantes() {
-        return axios.get(`${API_URL}`);
+        return axios.get(`${API_BASE_URL}/`);
     }
     
     getComprobanteById(id) {
-        return axios.get(`${API_URL}${id}`);
+        // Backend endpoint is /api/comprobantes/{id}
+        return axios.get(`${API_BASE_URL}/${id}`);
     }
     
-    generateComprobante(reservaId) {
-        return axios.post(`${API_URL}generar/${reservaId}`);
+    // Updated to match backend: POST /api/comprobantes/crear/reserva/{idReserva}?metodoPago=...
+    crearComprobante(reservaId, metodoPago) {
+        return axios.post(`${API_BASE_URL}/crear/reserva/${reservaId}`, null, {
+            params: {
+                metodoPago: metodoPago
+            }
+        });
     }
     
-    downloadComprobantePdf(reservaId) {
-        return axios.get(`${API_URL}download/reserva/${reservaId}`, { 
+    // This needs to align with the backend endpoint: /api/comprobantes/id/{idComprobante}/pdf
+    // The current ComprobanteForm uses 'reservaId' for download, which is incorrect.
+    // It should use the 'idComprobante' obtained after successful creation.
+    downloadComprobantePdfById(idComprobante) {
+        return axios.get(`${API_BASE_URL}/id/${idComprobante}/pdf`, { 
             responseType: 'blob',
-            // Make sure we get the headers too
             headers: {
                 'Accept': 'application/pdf',
             }
@@ -25,7 +34,14 @@ class ComprobanteService {
     }
     
     getComprobantesByEmail(email) {
-        return axios.get(`${API_URL}email/${email}`);
+        // Assuming backend has an endpoint like /api/comprobantes/email/{email}
+        // The provided ComprobanteController.java does not show this endpoint.
+        // If it exists, this is fine. Otherwise, it needs to be added or this method removed.
+        return axios.get(`${API_BASE_URL}/email/${email}`);
+    }
+
+    enviarEmailComprobante(codigoComprobante) {
+        return axios.post(`${API_BASE_URL}/${codigoComprobante}/enviar-email`);
     }
 }
 

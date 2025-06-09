@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ReserveService from '../services/ReserveService';
+import RackSemanalService from '../services/RackSemanalService';
 import { useNavigate } from 'react-router-dom';
 import { 
   format, 
@@ -8,16 +8,22 @@ import {
   addDays,
   addWeeks,
   subWeeks,
-  isSameDay,
-  parseISO
+  isSameDay
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import './RackSemanal.css';
 
+const DIAS_SEMANA_ORDER = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+const BLOQUES_TIEMPO_DEFINIDOS = [
+    "09:00-10:00", "10:00-11:00", "11:00-12:00", "12:00-13:00",
+    "13:00-14:00", "14:00-15:00", "15:00-16:00", "16:00-17:00",
+    "17:00-18:00", "18:00-19:00", "19:00-20:00"
+];
 
 const RackSemanal = () => {
-  const [reservas, setReservas] = useState([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [rackMatriz, setRackMatriz] = useState({}); // Stores Map<String, Map<String, RackCeldaDTO>>
+  const [currentDate, setCurrentDate] = useState(new Date()); // Keep for potential future use, though currentWeek drives display
   const [currentWeek, setCurrentWeek] = useState({
     start: startOfWeek(new Date(), { weekStartsOn: 1 }),
     end: endOfWeek(new Date(), { weekStartsOn: 1 })
@@ -25,211 +31,173 @@ const RackSemanal = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [reservaDetalles, setReservaDetalles] = useState({});
 
-  // Business hours configuration
-  const businessHours = {
-    weekday: { start: 14, end: 22 },
-    weekend: { start: 10, end: 22 }
-  };
+  useEffect(() => {
+    const fetchRackData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Optional: Call actualizarRack before fetching matrix if real-time updates are critical
+        // await RackSemanalService.actualizarRack();
+        const response = await RackSemanalService.obtenerMatrizRack();
+        setRackMatriz(response.data || {});
+      } catch (err) {
+        console.error('Error al cargar el rack semanal:', err);
+        setError('Error al cargar el rack semanal. Por favor, intente nuevamente.');
+        setRackMatriz({}); // Ensure it's an object on error
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchRackData();
+    // The backend matrix is for the whole week structure, not tied to a specific date range from client.
+    // If you want to fetch data for *specific weeks* (e.g. past/future beyond current week's structure),
+    // the backend would need to support date parameters. For now, it's a generic weekly template.
+    // Re-fetching on currentWeek change might be redundant if the backend always returns the same structure
+    // and updates it based on *all* reservations.
+    // However, if `actualizarRack` is called frequently, re-fetching ensures fresh data.
+  }, [currentWeek]); // Consider if re-fetch on week change is truly needed or if an explicit refresh button is better.
 
-  // Navigation functions
-  const goToNextWeek = () => {
-    const nextWeekStart = addWeeks(currentWeek.start, 1);
-    setCurrentWeek({
-      start: nextWeekStart,
-      end: endOfWeek(nextWeekStart, { weekStartsOn: 1 })
-    });
-    setCurrentDate(nextWeekStart);
-  };
-
-  const goToPrevWeek = () => {
-    const prevWeekStart = subWeeks(currentWeek.start, 1);
-    setCurrentWeek({
-      start: prevWeekStart,
-      end: endOfWeek(prevWeekStart, { weekStartsOn: 1 })
-    });
-    setCurrentDate(prevWeekStart);
-  };
-
-  const goToCurrentWeek = () => {
-    const today = new Date();
-    setCurrentWeek({
-      start: startOfWeek(today, { weekStartsOn: 1 }),
-      end: endOfWeek(today, { weekStartsOn: 1 })
-    });
-    setCurrentDate(today);
-  };
-
-  // Generate days for the week
   const weekDays = [];
   for (let i = 0; i < 7; i++) {
     weekDays.push(addDays(currentWeek.start, i));
   }
 
-  // Generate time slots based on business hours
-  const generateTimeSlots = () => {
-    const slots = [];
-    // Start from the earliest opening time
-    const startHour = businessHours.weekend.start;
-    const endHour = businessHours.weekend.end;
-    
-    for (let hour = startHour; hour < endHour; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+  const timeSlots = BLOQUES_TIEMPO_DEFINIDOS;
+
+  const getDiaSemanaString = (date) => {
+    const dayName = format(date, 'EEEE', { locale: es });
+    return dayName.charAt(0).toUpperCase() + dayName.slice(1);
+  };
+  
+  const handleAddReservation = (day, timeSlot) => {
+    const dateStr = format(day, 'yyyy-MM-dd');
+    const startTime = timeSlot.split('-')[0];
+    navigate(`/agregar-reserva?date=${dateStr}&time=${startTime}`);
+  };
+
+  const handleViewReservation = async (reservaId) => {
+    if (!reservaId) return;
+    if (reservaDetalles[reservaId]) { // Check cache first
+        alert(`Reserva ID: ${reservaDetalles[reservaId].id}\nCliente: ${reservaDetalles[reservaId].nombreUsuario}\nEmail: ${reservaDetalles[reservaId].emailUsuario}\nTipo: ${formatTipoReserva(reservaDetalles[reservaId].tipoReserva)}`);
+        return;
     }
-    return slots;
+    try {
+        setLoading(true); 
+        const response = await RackSemanalService.obtenerDetallesReserva(reservaId);
+        if (response.data) {
+            setReservaDetalles(prev => ({...prev, [reservaId]: response.data})); 
+            alert(`Reserva ID: ${response.data.id}\nCliente: ${response.data.nombreUsuario}\nEmail: ${response.data.emailUsuario}\nTipo: ${formatTipoReserva(response.data.tipoReserva)}`);
+        } else {
+            setError(`No se pudieron cargar los detalles de la reserva ${reservaId}.`);
+        }
+    } catch (err) {
+        console.error(`Error al obtener detalles de la reserva ${reservaId}:`, err);
+        setError(`No se pudieron cargar los detalles de la reserva ${reservaId}.`);
+    } finally {
+        setLoading(false);
+    }
   };
-
-  const timeSlots = generateTimeSlots();
-
-  // Check if a given slot is within business hours for a specific day
-  const isBusinessHours = (day, timeSlot) => {
-    const [hour, minute] = timeSlot.split(':').map(Number);
-    const isWeekend = [0, 6].includes(day.getDay()); // Sunday or Saturday
-    const { start, end } = isWeekend ? businessHours.weekend : businessHours.weekday;
-    
-    return hour >= start && hour < end;
-  };
-
-  // Get reservation for specific date and time
-  const getReservationsForSlot = (day, timeSlot) => {
-    const [hour, minute] = timeSlot.split(':').map(Number);
-    const slotDate = new Date(day);
-    slotDate.setHours(hour, minute, 0, 0);
-    
-    return reservas.filter(reserva => {
-      const startTime = new Date(reserva.inicio_reserva);
-      const endTime = new Date(reserva.fin_reserva);
-      
-      return startTime <= slotDate && slotDate < endTime;
-    });
-  };
-
-  // Format reservation type
+  
   const formatTipoReserva = (tipo) => {
     switch(tipo) {
-      case 1: return 'Normal';
-      case 2: return 'Extendida';
-      case 3: return 'Premium';
+      case 1: return '10 vueltas';
+      case 2: return '15 vueltas';
+      case 3: return '20 vueltas';
       default: return `Tipo ${tipo}`;
     }
   };
 
-  // Handle adding a new reservation
-  const handleAddReservation = (day, timeSlot) => {
-    const [hour, minute] = timeSlot.split(':').map(Number);
-    const reservationDate = new Date(day);
-    reservationDate.setHours(hour, minute, 0, 0);
-    
-    navigate(`/agregar-reserva?date=${format(reservationDate, 'yyyy-MM-dd')}&time=${timeSlot}`);
+  const goToNextWeek = () => {
+    const nextWeekStart = addWeeks(currentWeek.start, 1);
+    setCurrentWeek({ start: nextWeekStart, end: endOfWeek(nextWeekStart, { weekStartsOn: 1 }) });
+  };
+  const goToPrevWeek = () => {
+    const prevWeekStart = subWeeks(currentWeek.start, 1);
+    setCurrentWeek({ start: prevWeekStart, end: endOfWeek(prevWeekStart, { weekStartsOn: 1 }) });
+  };
+  const goToCurrentWeek = () => {
+    const today = new Date();
+    setCurrentWeek({ start: startOfWeek(today, { weekStartsOn: 1 }), end: endOfWeek(today, { weekStartsOn: 1 }) });
   };
 
-  // Handle viewing an existing reservation
-  const handleViewReservation = (reservaId) => {
-    navigate(`/reservas?id=${reservaId}`);
-  };
-
-  useEffect(() => {
-    const fetchReservas = async () => {
-      try {
-        setLoading(true);
-        const response = await ReserveService.getAllReserves();
-        setReservas(Array.isArray(response.data) ? response.data : []);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error al cargar reservas:', err);
-        setError('Error al cargar el rack semanal. Por favor, intente nuevamente.');
-        setLoading(false);
-      }
-    };
-    
-    fetchReservas();
-  }, [currentWeek]); // Refetch when the week changes
-
-  if (loading) return <div className="loading-container"><div className="loading-spinner"></div></div>;
+  if (loading && Object.keys(rackMatriz).length === 0) return <div className="loading-container"><div className="loading-spinner"></div></div>;
   if (error) return <div className="error-message">{error}</div>;
+  if (Object.keys(rackMatriz).length === 0 && !loading) return <div className="error-message">No hay datos del rack para mostrar. Intente inicializar o actualizar.</div>;
+
 
   return (
     <div className="rack-semanal">
       <div className="rack-header">
         <h2>Rack Semanal de Reservas</h2>
-        
         <div className="week-display">
           {format(currentWeek.start, 'd MMM', { locale: es })} - {format(currentWeek.end, 'd MMM yyyy', { locale: es })}
         </div>
-        
         <div className="week-navigation">
-          <button onClick={goToPrevWeek} className="nav-button">
-            &laquo; Semana Anterior
-          </button>
-          <button onClick={goToCurrentWeek} className="nav-button current">
-            Semana Actual
-          </button>
-          <button onClick={goToNextWeek} className="nav-button">
-            Semana Siguiente &raquo;
-          </button>
+          <button onClick={goToPrevWeek} className="nav-button">&laquo; Semana Anterior</button>
+          <button onClick={goToCurrentWeek} className="nav-button current">Semana Actual</button>
+          <button onClick={goToNextWeek} className="nav-button">Semana Siguiente &raquo;</button>
         </div>
       </div>
 
       <div className="rack-container">
         <div className="time-column">
-          <div className="day-header"></div>
+          <div className="day-header" style={{ height: '62px' }}></div> {/* Adjusted for alignment */}
           {timeSlots.map((slot, index) => (
             <div key={index} className="time-slot">
-              {slot}
+              {slot.split('-')[0]}
             </div>
           ))}
         </div>
         
         <div className="days-grid">
-          {/* Day headers */}
           <div className="day-headers">
             {weekDays.map((day, index) => (
-              <div 
-                key={index} 
-                className={`day-header ${isSameDay(day, new Date()) ? 'today' : ''}`}
-              >
+              <div key={index} className={`day-header ${isSameDay(day, new Date()) ? 'today' : ''}`}>
                 <div className="day-name">{format(day, 'eee', { locale: es })}</div>
                 <div className="day-date">{format(day, 'd', { locale: es })}</div>
               </div>
             ))}
           </div>
           
-          {/* Time slots for each day */}
           <div className="time-slots-grid">
             {timeSlots.map((timeSlot, timeIndex) => (
               <div key={timeIndex} className="time-row">
                 {weekDays.map((day, dayIndex) => {
-                  const isOpen = isBusinessHours(day, timeSlot);
-                  const reservationsForSlot = isOpen ? getReservationsForSlot(day, timeSlot) : [];
-                  const hasReservation = reservationsForSlot.length > 0;
+                  const diaSemanaStr = getDiaSemanaString(day);
+                  const celdaInfo = rackMatriz[diaSemanaStr] ? rackMatriz[diaSemanaStr][timeSlot] : null;
                   
+                  const isReserved = celdaInfo ? celdaInfo.reservado : false;
+                  const reservaId = celdaInfo ? celdaInfo.reservaId : null;
+                  // Assuming all defined slots are "open" unless explicitly marked otherwise by backend (not currently supported by DTO)
+                  const isOpen = true; 
+                  const currentReservaDetalle = reservaId ? reservaDetalles[reservaId] : null;
+
                   return (
                     <div 
-                      key={dayIndex}
-                      className={`slot-cell ${!isOpen ? 'closed' : hasReservation ? 'reserved' : 'available'} ${isSameDay(day, new Date()) ? 'today' : ''}`}
+                      key={`${dayIndex}-${timeIndex}`}
+                      className={`slot-cell ${!isOpen ? 'closed' : isReserved ? 'reserved' : 'available'} ${isSameDay(day, new Date()) ? 'today' : ''}`}
                       onClick={() => {
-                        if (isOpen && !hasReservation) {
+                        if (isOpen && !isReserved) {
                           handleAddReservation(day, timeSlot);
+                        } else if (isReserved && reservaId) {
+                          handleViewReservation(reservaId);
                         }
                       }}
                     >
                       {!isOpen ? (
                         <span className="closed-text">Cerrado</span>
-                      ) : hasReservation ? (
-                        reservationsForSlot.map((reserva, i) => (
-                          <div 
-                            key={i} 
-                            className="reservation-card"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewReservation(reserva.id);
-                            }}
-                          >
-                            <div className="reservation-email">{reserva.emailarrendatario.split('@')[0]}</div>
-                            <div className="reservation-type">{formatTipoReserva(reserva.tiporeserva)} • {reserva.numero_personas} pers.</div>
-                          </div>
-                        ))
+                      ) : isReserved ? (
+                        <div className="reservation-card">
+                           <div className="reservation-email">
+                            {currentReservaDetalle ? currentReservaDetalle.nombreUsuario || currentReservaDetalle.emailUsuario?.split('@')[0] : (reservaId ? `ID: ${reservaId}`: 'Reservado')}
+                           </div>
+                           <div className="reservation-type">
+                            {currentReservaDetalle ? `${formatTipoReserva(currentReservaDetalle.tipoReserva)} • ${currentReservaDetalle.cantidadPersonas}p` : (loading && reservaId ? 'Cargando...' : '')}
+                           </div>
+                        </div>
                       ) : (
                         <span className="available-text">Disponible</span>
                       )}

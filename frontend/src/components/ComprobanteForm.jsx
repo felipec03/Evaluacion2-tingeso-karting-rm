@@ -1,72 +1,90 @@
 import React, { useState, useEffect } from 'react';
 import ComprobanteService from '../services/ComprobanteService';
+import { useLocation } from 'react-router-dom';
 
-const ComprobanteForm = ({ initialReservaId = '' }) => {
+const ComprobanteForm = () => {
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const initialReservaId = queryParams.get('reservaId') || '';
+
     const [reservaId, setReservaId] = useState(initialReservaId);
+    const [metodoPago, setMetodoPago] = useState('TARJETA'); // Default payment method
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const [comprobanteDetails, setComprobanteDetails] = useState(null);
 
-    // If initialReservaId is provided and not empty, automatically generate the comprobante
     useEffect(() => {
-        if (initialReservaId && !success && !loading) {
-            handleSubmit(new Event('submit'));
+        // This auto-submit logic might need re-evaluation if metodoPago is also required from query params.
+        // For now, it will use the default metodoPago if initialReservaId is present.
+        if (initialReservaId && !success && !loading && metodoPago) {
+            // Create a synthetic event or call a different handler
+            // handleSubmit(new Event('submit')); // This might not be ideal
+            // Consider a dedicated function if auto-submission is complex
         }
-    }, [initialReservaId]);
+    }, [initialReservaId, metodoPago, success, loading]);
 
-    const handleChange = (e) => {
+    const handleReservaIdChange = (e) => {
         setReservaId(e.target.value);
+    };
+
+    const handleMetodoPagoChange = (e) => {
+        setMetodoPago(e.target.value);
     };
     
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!reservaId || isNaN(reservaId) || reservaId <= 0) {
-            setError('Por favor ingrese un ID de reserva válido');
+        if (!reservaId || isNaN(reservaId) || Number(reservaId) <= 0) {
+            setError('Por favor ingrese un ID de reserva válido.');
+            return;
+        }
+        if (!metodoPago) {
+            setError('Por favor seleccione un método de pago.');
             return;
         }
 
         setLoading(true);
         setError('');
         setSuccess(false);
+        setComprobanteDetails(null);
         
-        ComprobanteService.generateComprobante(reservaId)
+        ComprobanteService.crearComprobante(reservaId, metodoPago)
             .then(response => {
                 setComprobanteDetails(response.data);
                 setSuccess(true);
                 setLoading(false);
             })
             .catch(err => {
-                setError('Error al generar el comprobante: ' + (err.response?.data || err.message));
+                setError('Error al generar el comprobante: ' + (err.response?.data?.message || err.response?.data || err.message));
                 setLoading(false);
             });
     };
     
     const downloadPdf = () => {
-        if (!reservaId) return;
+        if (!comprobanteDetails || !comprobanteDetails.idComprobante) {
+            setError('No hay detalles del comprobante para descargar o falta el ID del comprobante.');
+            return;
+        }
         
         setLoading(true);
         setError('');
         
-        ComprobanteService.downloadComprobantePdf(reservaId)
+        ComprobanteService.downloadComprobantePdfById(comprobanteDetails.idComprobante)
             .then(response => {
-                // Check if the response is a PDF (application/pdf) or an error message
                 const contentType = response.headers['content-type'];
                 
                 if (contentType && contentType.includes('application/pdf')) {
-                    // Process as PDF
                     const url = window.URL.createObjectURL(new Blob([response.data]));
                     const link = document.createElement('a');
                     link.href = url;
                     
-                    // Get filename from content-disposition header or use a default
                     const contentDisposition = response.headers['content-disposition'];
-                    let filename = `comprobante-reserva-${reservaId}.pdf`;
+                    let filename = `Comprobante-${comprobanteDetails.idComprobante}.pdf`;
                     
                     if (contentDisposition) {
-                        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
                         if (filenameMatch && filenameMatch.length > 1) {
-                            filename = filenameMatch[1];
+                            filename = filenameMatch[1].replace(/"/g, ''); // Remove quotes
                         }
                     }
                     
@@ -74,35 +92,22 @@ const ComprobanteForm = ({ initialReservaId = '' }) => {
                     document.body.appendChild(link);
                     link.click();
                     link.remove();
-                    
-                    // Clean up the URL object
                     setTimeout(() => window.URL.revokeObjectURL(url), 100);
                 } else {
-                    // Handle as error message
                     const reader = new FileReader();
-                    reader.onload = () => {
-                        setError('Error: ' + reader.result);
-                    };
+                    reader.onload = () => { setError('Error al descargar: ' + reader.result); };
                     reader.readAsText(new Blob([response.data]));
                 }
             })
             .catch(err => {
                 console.error('Error downloading PDF:', err);
                 let errorMessage = 'Error al descargar el PDF';
-                
-                if (err.response) {
-                    if (err.response.data instanceof Blob) {
-                        // Try to read the blob as text
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                            setError(errorMessage + ': ' + reader.result);
-                        };
-                        reader.readAsText(err.response.data);
-                    } else {
-                        setError(errorMessage + ': ' + (err.response.data || err.message));
-                    }
+                if (err.response && err.response.data instanceof Blob) {
+                    const reader = new FileReader();
+                    reader.onload = () => { setError(errorMessage + ': ' + reader.result); };
+                    reader.readAsText(err.response.data);
                 } else {
-                    setError(errorMessage + ': ' + err.message);
+                    setError(errorMessage + ': ' + (err.response?.data || err.message));
                 }
             })
             .finally(() => {
@@ -110,18 +115,38 @@ const ComprobanteForm = ({ initialReservaId = '' }) => {
             });
     };
 
+    const handleEnviarEmail = () => {
+        if (!comprobanteDetails || !comprobanteDetails.codigoComprobante) {
+            setError('No hay código de comprobante para enviar por email.');
+            return;
+        }
+        setLoading(true);
+        setError('');
+        ComprobanteService.enviarEmailComprobante(comprobanteDetails.codigoComprobante)
+            .then(response => {
+                alert(response.data || "Solicitud de envío de email procesada.");
+            })
+            .catch(err => {
+                setError('Error al enviar email: ' + (err.response?.data || err.message));
+            })
+            .finally(() => {
+                setLoading(false);
+            });
+    };
+
     const resetForm = () => {
-        setReservaId('');
+        setReservaId(initialReservaId); // Reset to initial if provided, else empty
+        setMetodoPago('TARJETA');
         setSuccess(false);
         setError('');
         setComprobanteDetails(null);
     };
     
     return (
-        <div className="container">
+        <div className="container mt-4">
             <div className="card shadow-sm">
                 <div className="card-body">
-                    <h3 className="card-title mb-4">Generador de Comprobantes</h3>
+                    <h3 className="card-title mb-4">Generar Comprobante de Pago</h3>
                     
                     {error && (
                         <div className="alert alert-danger" role="alert">
@@ -140,14 +165,28 @@ const ComprobanteForm = ({ initialReservaId = '' }) => {
                                     className="form-control"
                                     id="reservaId"
                                     value={reservaId}
-                                    onChange={handleChange}
+                                    onChange={handleReservaIdChange}
                                     min="1"
                                     required
                                     placeholder="Ingrese el ID de la reserva"
                                 />
-                                <div className="form-text">
-                                    Ingrese el número de identificación de la reserva para generar su comprobante
-                                </div>
+                            </div>
+
+                            <div className="mb-3">
+                                <label htmlFor="metodoPago" className="form-label">
+                                    Método de Pago
+                                </label>
+                                <select
+                                    className="form-select"
+                                    id="metodoPago"
+                                    value={metodoPago}
+                                    onChange={handleMetodoPagoChange}
+                                    required
+                                >
+                                    <option value="TARJETA">Tarjeta</option>
+                                    <option value="EFECTIVO">Efectivo</option>
+                                    <option value="TRANSFERENCIA">Transferencia</option>
+                                </select>
                             </div>
                             
                             <button
@@ -155,64 +194,52 @@ const ComprobanteForm = ({ initialReservaId = '' }) => {
                                 className="btn btn-primary"
                                 disabled={loading}
                             >
-                                {loading ? (
-                                    <>
-                                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                        Generando...
-                                    </>
-                                ) : 'Generar Comprobante'}
+                                {loading ? 'Generando...' : 'Generar Comprobante'}
                             </button>
                         </form>
                     ) : (
                         <div>
                             <div className="alert alert-success" role="alert">
                                 <h4 className="alert-heading">¡Comprobante generado correctamente!</h4>
-                                <p>Se ha generado el comprobante para la reserva #{reservaId}</p>
+                                <p>Se ha generado el comprobante para la reserva #{comprobanteDetails?.idReserva}</p>
                             </div>
                             
                             {comprobanteDetails && (
                                 <div className="card mb-3 bg-light">
                                     <div className="card-body">
                                         <h5 className="card-title">Detalles del Comprobante</h5>
-                                        <p><strong>Código:</strong> {comprobanteDetails.codigo}</p>
-                                        <p><strong>Email:</strong> {comprobanteDetails.email}</p>
-                                        <p><strong>Tarifa Base:</strong> ${comprobanteDetails.tarifaBase.toLocaleString()}</p>
-                                        <p><strong>Precio sin IVA:</strong> ${comprobanteDetails.precioSinIva.toLocaleString()}</p>
-                                        <p><strong>IVA:</strong> ${comprobanteDetails.iva.toLocaleString()}</p>
-                                        <p><strong>Total:</strong> ${comprobanteDetails.total.toLocaleString()}</p>
-                                        
-                                        {(comprobanteDetails.descuentoGrupo > 0 || 
-                                          comprobanteDetails.descuentoFrecuente > 0 || 
-                                          comprobanteDetails.descuentoCumple > 0) && (
-                                            <div>
-                                                <h6 className="mt-3">Descuentos aplicados:</h6>
-                                                {comprobanteDetails.descuentoGrupo > 0 && (
-                                                    <p>Descuento por grupo: ${comprobanteDetails.descuentoGrupo.toLocaleString()}</p>
-                                                )}
-                                                {comprobanteDetails.descuentoFrecuente > 0 && (
-                                                    <p>Descuento cliente frecuente: ${comprobanteDetails.descuentoFrecuente.toLocaleString()}</p>
-                                                )}
-                                                {comprobanteDetails.descuentoCumple > 0 && (
-                                                    <p>Descuento por cumpleaños: ${comprobanteDetails.descuentoCumple.toLocaleString()}</p>
-                                                )}
-                                            </div>
+                                        <p><strong>Código Comprobante:</strong> {comprobanteDetails.codigoComprobante}</p>
+                                        <p><strong>ID Reserva:</strong> {comprobanteDetails.idReserva}</p>
+                                        <p><strong>Cliente:</strong> {comprobanteDetails.nombreUsuario}</p>
+                                        <p><strong>Email:</strong> {comprobanteDetails.emailUsuario}</p>
+                                        <p><strong>Fecha Emisión:</strong> {new Date(comprobanteDetails.fechaEmision).toLocaleString()}</p>
+                                        <p><strong>Monto Base:</strong> ${comprobanteDetails.montoBase?.toLocaleString('es-CL')}</p>
+                                        {comprobanteDetails.montoDescuentoTotal > 0 && (
+                                            <p><strong>Descuento Aplicado ({comprobanteDetails.porcentajeDescuentoAplicado?.toFixed(2)}%):</strong> -${comprobanteDetails.montoDescuentoTotal?.toLocaleString('es-CL')}</p>
                                         )}
+                                        <p><strong>Subtotal sin IVA:</strong> ${comprobanteDetails.subtotalSinIva?.toLocaleString('es-CL')}</p>
+                                        <p><strong>IVA (19%):</strong> ${comprobanteDetails.iva?.toLocaleString('es-CL')}</p>
+                                        <p><strong>Total Pagado:</strong> ${comprobanteDetails.montoPagadoTotal?.toLocaleString('es-CL')}</p>
+                                        <p><strong>Método de Pago:</strong> {comprobanteDetails.metodoPago}</p>
+                                        <p><strong>Estado Pago:</strong> {comprobanteDetails.estadoPago}</p>
                                     </div>
                                 </div>
                             )}
                             
-                            <div className="d-flex gap-2">
+                            <div className="d-flex flex-wrap gap-2">
                                 <button 
-                                    className="btn btn-primary" 
+                                    className="btn btn-success" 
                                     onClick={downloadPdf}
-                                    disabled={loading}
+                                    disabled={loading || !comprobanteDetails}
                                 >
-                                    {loading ? (
-                                        <>
-                                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                            Descargando...
-                                        </>
-                                    ) : 'Descargar PDF'}
+                                    {loading ? 'Descargando...' : 'Descargar PDF'}
+                                </button>
+                                <button
+                                    className="btn btn-info"
+                                    onClick={handleEnviarEmail}
+                                    disabled={loading || !comprobanteDetails}
+                                >
+                                    {loading ? 'Enviando...' : 'Enviar por Email'}
                                 </button>
                                 <button 
                                     className="btn btn-outline-secondary" 
@@ -223,18 +250,6 @@ const ComprobanteForm = ({ initialReservaId = '' }) => {
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
-            
-            <div className="mt-4">
-                <div className="alert alert-info">
-                    <h5 className="alert-heading">¿Dónde encuentro el ID de mi reserva?</h5>
-                    <p>Puede encontrar el ID de su reserva en:</p>
-                    <ul>
-                        <li>El listado de reservas en su perfil</li>
-                        <li>El correo electrónico de confirmación de su reserva</li>
-                        <li>Contactando directamente con servicio al cliente</li>
-                    </ul>
                 </div>
             </div>
         </div>

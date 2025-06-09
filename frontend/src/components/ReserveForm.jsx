@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './ReserveForm.css';
 import ReserveService from '../services/ReserveService';
@@ -16,175 +16,118 @@ const ReserveForm = () => {
   const defaultTime = queryParams.get('time') || '';
 
   const [formData, setFormData] = useState({
-    emailarrendatario: '',
-    tiporeserva: 1,
+    nombreUsuario: '',
+    rutUsuario: '',
+    emailUsuario: '',
+    telefonoUsuario: '',
+    tipoReserva: 1,
     fecha: defaultDate,
     hora_inicio: defaultTime,
-    numero_personas: 1,
+    cantidadPersonas: 1,
     cumpleanios: false,
-    cantidadcumple: 0
+    cantidadCumple: 0
   });
 
-  const [priceInfo, setPriceInfo] = useState(null);
+  // Removed priceInfo state
+  // const [priceInfo, setPriceInfo] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prevFormData => ({
+      ...prevFormData,
       [name]: type === 'checkbox' ? checked : 
-              type === 'number' ? parseInt(value) : value
-    });
+              (type === 'number' || name === 'tipoReserva' || name === 'cantidadPersonas' || name === 'cantidadCumple') && value !== '' ? parseInt(value) : value
+    }));
   };
 
-  const calculateReservationEnd = () => {
-    if (!formData.fecha || !formData.hora_inicio) return '';
-    
-    // Calculate end time based on reservation type
-    const duration = formData.tiporeserva === 1 ? 1 : 
-                     formData.tiporeserva === 2 ? 1.5 : 2;
-                     
-    const [hours, minutes] = formData.hora_inicio.split(':');
-    const startDate = new Date();
-    startDate.setHours(parseInt(hours));
-    startDate.setMinutes(parseInt(minutes));
-    
-    const endDate = new Date(startDate.getTime() + duration * 60 * 60 * 1000);
-    const endHours = endDate.getHours().toString().padStart(2, '0');
-    const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
-    
-    return `${endHours}:${endMinutes}`;
-  };
-
-  const calculatePrice = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // Create datetime objects for API request
-      const fechaStr = formData.fecha;
-      const inicioStr = `${fechaStr}T${formData.hora_inicio}:00`;
-      
-      // Calculate end time
-      const endTime = calculateReservationEnd();
-      const finStr = `${fechaStr}T${endTime}:00`;
-      
-      const reservaData = {
-        emailarrendatario: formData.emailarrendatario,
-        tiporeserva: formData.tiporeserva,
-        inicio_reserva: inicioStr,
-        fin_reserva: finStr,
-        numero_personas: formData.numero_personas,
-        cumpleanios: formData.cumpleanios ? new Date() : null,
-        cantidadcumple: formData.cumpleanios ? formData.cantidadcumple : 0
-      };
-      
-      // Calculate price without saving
-      const response = await ReserveService.calculatePrice(reservaData);
-      setPriceInfo(response.data);
-      setLoading(false);
-    } catch (err) {
-      console.error('Error al calcular precio:', err);
-      setError(err.response?.data || 'Error al calcular el precio de la reserva');
-      setLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    try {
-      setLoading(true);
-      
-      // Create datetime objects for API request
-      const fechaStr = formData.fecha;
-      const inicioStr = `${fechaStr}T${formData.hora_inicio}:00`;
-      
-      // Calculate end time
-      const endTime = calculateReservationEnd();
-      const finStr = `${fechaStr}T${endTime}:00`;
-      
-      const reservaData = {
-        emailarrendatario: formData.emailarrendatario,
-        tiporeserva: formData.tiporeserva,
-        inicio_reserva: inicioStr,
-        fin_reserva: finStr,
-        numero_personas: formData.numero_personas,
-        cumpleanios: formData.cumpleanios ? new Date() : null,
-        cantidadcumple: formData.cumpleanios ? formData.cantidadcumple : 0
-      };
-      
-      const response = await ReserveService.createReserve(reservaData);
-      console.log('Reserva creada:', response.data);
-      
-      setSuccess(true);
-      setLoading(false);
-      
-      // Redirect to reservation details after short delay
-      setTimeout(() => {
-        navigate(`/reservas?id=${response.data.id}`);
-      }, 2000);
-      
-    } catch (err) {
-      console.error('Error al crear reserva:', err);
-      setError(err.response?.data || 'Error al crear la reserva');
-      setLoading(false);
-    }
-  };
-  
   const validateForm = () => {
-    if (!formData.emailarrendatario) {
+    if (!formData.nombreUsuario) {
+      setError('El nombre es obligatorio');
+      return false;
+    }
+    if (!formData.rutUsuario) {
+      setError('El RUT es obligatorio');
+      return false;
+    }
+    if (!formData.emailUsuario) {
       setError('El email es obligatorio');
       return false;
     }
-    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.emailUsuario)) {
+      setError('El formato del email es inválido');
+      return false;
+    }
+    if (!formData.telefonoUsuario) {
+      setError('El teléfono es obligatorio');
+      return false;
+    }
     if (!formData.fecha) {
       setError('La fecha es obligatoria');
       return false;
     }
-    
     if (!formData.hora_inicio) {
       setError('La hora de inicio es obligatoria');
       return false;
     }
-    
-    // Validar formato de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.emailarrendatario)) {
-      setError('El formato del email es inválido');
-      return false;
-    }
-    
-    // Validar que la fecha no sea anterior a hoy
-    const selectedDate = new Date(formData.fecha);
+    const selectedDate = new Date(formData.fecha + "T00:00:00");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     if (selectedDate < today) {
       setError('La fecha no puede ser anterior a hoy');
       return false;
     }
-    
-    if (formData.cumpleanios && formData.cantidadcumple <= 0) {
+    if (formData.cumpleanios && formData.cantidadCumple <= 0) {
       setError('Debe indicar cuántas personas cumplen años');
       return false;
     }
-    
-    if (formData.cumpleanios && formData.cantidadcumple > formData.numero_personas) {
+    if (formData.cumpleanios && formData.cantidadCumple > formData.cantidadPersonas) {
       setError('El número de personas de cumpleaños no puede ser mayor al total');
       return false;
     }
-    
     setError(null);
     return true;
+  };
+  
+  const prepareReservaData = () => {
+    const fechaHoraISO = `${formData.fecha}T${formData.hora_inicio}:00`;
+
+    return {
+      nombreUsuario: formData.nombreUsuario,
+      rutUsuario: formData.rutUsuario,
+      emailUsuario: formData.emailUsuario,
+      telefonoUsuario: formData.telefonoUsuario,
+      fechaHora: fechaHoraISO,
+      tipoReserva: parseInt(formData.tipoReserva),
+      cantidadPersonas: parseInt(formData.cantidadPersonas),
+      cantidadCumple: formData.cumpleanios ? parseInt(formData.cantidadCumple) : 0,
+    };
+  };
+
+  // Removed calculatePrice function
+  // const calculatePrice = async (e) => { ... };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    
+    const reservaDataToSubmit = prepareReservaData();
+
+    try {
+      setLoading(true);
+      setError(null); // Clear previous errors
+      const response = await ReserveService.createReserve(reservaDataToSubmit);
+      console.log('Reserva creada:', response.data);
+      setSuccess(true);
+      setLoading(false);
+      setTimeout(() => {
+        navigate(`/reservas`); 
+      }, 2000);
+    } catch (err) {
+      console.error('Error al crear reserva:', err);
+      setError(err.response?.data?.message || err.response?.data || 'Error al crear la reserva');
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -204,30 +147,69 @@ const ReserveForm = () => {
           {error && <div className="alert alert-danger">{error}</div>}
           
           <div className="mb-3">
-            <label htmlFor="emailarrendatario" className="form-label">Email</label>
+            <label htmlFor="nombreUsuario" className="form-label">Nombre Completo</label>
+            <input
+              type="text"
+              className="form-control"
+              id="nombreUsuario"
+              name="nombreUsuario"
+              value={formData.nombreUsuario}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="rutUsuario" className="form-label">RUT (Ej: 12345678-9)</label>
+            <input
+              type="text"
+              className="form-control"
+              id="rutUsuario"
+              name="rutUsuario"
+              value={formData.rutUsuario}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="emailUsuario" className="form-label">Email</label>
             <input
               type="email"
               className="form-control"
-              id="emailarrendatario"
-              name="emailarrendatario"
-              value={formData.emailarrendatario}
+              id="emailUsuario"
+              name="emailUsuario"
+              value={formData.emailUsuario}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label htmlFor="telefonoUsuario" className="form-label">Teléfono</label>
+            <input
+              type="tel"
+              className="form-control"
+              id="telefonoUsuario"
+              name="telefonoUsuario"
+              value={formData.telefonoUsuario}
               onChange={handleInputChange}
               required
             />
           </div>
           
           <div className="mb-3">
-            <label htmlFor="tiporeserva" className="form-label">Tipo de Reserva</label>
+            <label htmlFor="tipoReserva" className="form-label">Tipo de Reserva</label>
             <select
               className="form-select"
-              id="tiporeserva"
-              name="tiporeserva"
-              value={formData.tiporeserva}
+              id="tipoReserva"
+              name="tipoReserva"
+              value={formData.tipoReserva}
               onChange={handleInputChange}
             >
-              <option value={1}>Normal (10 vueltas)</option>
-              <option value={2}>Extendida (15 vueltas)</option>
-              <option value={3}>Premium (20 vueltas)</option>
+              <option value={1}>10 vueltas</option>
+              <option value={2}>15 vueltas</option>
+              <option value={3}>20 vueltas</option>
             </select>
           </div>
           
@@ -260,15 +242,15 @@ const ReserveForm = () => {
           </div>
           
           <div className="mb-3">
-            <label htmlFor="numero_personas" className="form-label">Número de personas</label>
+            <label htmlFor="cantidadPersonas" className="form-label">Número de personas</label>
             <input
               type="number"
               className="form-control"
-              id="numero_personas"
-              name="numero_personas"
+              id="cantidadPersonas"
+              name="cantidadPersonas"
               min="1"
-              max="15"
-              value={formData.numero_personas}
+              max="20"
+              value={formData.cantidadPersonas}
               onChange={handleInputChange}
               required
             />
@@ -288,17 +270,17 @@ const ReserveForm = () => {
           
           {formData.cumpleanios && (
             <div className="mb-3">
-              <label htmlFor="cantidadcumple" className="form-label">¿Cuántas personas cumplen años?</label>
+              <label htmlFor="cantidadCumple" className="form-label">¿Cuántas personas cumplen años?</label>
               <input
                 type="number"
                 className="form-control"
-                id="cantidadcumple"
-                name="cantidadcumple"
+                id="cantidadCumple"
+                name="cantidadCumple"
                 min="1"
-                max={formData.numero_personas}
-                value={formData.cantidadcumple}
+                max={formData.cantidadPersonas}
+                value={formData.cantidadCumple}
                 onChange={handleInputChange}
-                required
+                required={formData.cumpleanios}
               />
             </div>
           )}
@@ -308,23 +290,17 @@ const ReserveForm = () => {
               type="button" 
               className="btn btn-secondary" 
               onClick={handleCancel}
+              disabled={loading}
             >
               Cancelar
             </button>
             
-            <button 
-              type="button" 
-              className="btn btn-info"
-              onClick={calculatePrice}
-              disabled={loading}
-            >
-              {loading ? 'Calculando...' : 'Calcular Precio'}
-            </button>
+            {/* Removed Calculate Price button */}
             
             <button 
               type="submit" 
               className="btn btn-primary"
-              disabled={loading}
+              disabled={loading} // Only disable if loading
             >
               {loading ? 'Enviando...' : 'Crear Reserva'}
             </button>
@@ -332,49 +308,8 @@ const ReserveForm = () => {
         </form>
       )}
       
-      {priceInfo && (
-        <div className="price-info-card mt-4">
-          <h4>Detalles de Precio</h4>
-          <table className="table">
-            <tbody>
-              <tr>
-                <td>Precio Base</td>
-                <td>${priceInfo.precioBase?.toLocaleString('es-CL')}</td>
-              </tr>
-              {priceInfo.descuentoGrupo > 0 && (
-                <tr>
-                  <td>Descuento por Grupo</td>
-                  <td>-${priceInfo.descuentoGrupo?.toLocaleString('es-CL')}</td>
-                </tr>
-              )}
-              {priceInfo.descuentoFrecuente > 0 && (
-                <tr>
-                  <td>Descuento Cliente Frecuente</td>
-                  <td>-${priceInfo.descuentoFrecuente?.toLocaleString('es-CL')}</td>
-                </tr>
-              )}
-              {priceInfo.descuentoCumple > 0 && (
-                <tr>
-                  <td>Descuento por Cumpleaños</td>
-                  <td>-${priceInfo.descuentoCumple?.toLocaleString('es-CL')}</td>
-                </tr>
-              )}
-              <tr>
-                <td>Subtotal</td>
-                <td>${priceInfo.totalSinIva?.toLocaleString('es-CL')}</td>
-              </tr>
-              <tr>
-                <td>IVA (19%)</td>
-                <td>${priceInfo.iva?.toLocaleString('es-CL')}</td>
-              </tr>
-              <tr className="table-active">
-                <th>Total a Pagar</th>
-                <th>${priceInfo.totalConIva?.toLocaleString('es-CL')}</th>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Removed priceInfo display section */}
+      {/* {priceInfo && ( ... )} */}
     </div>
   );
 };
