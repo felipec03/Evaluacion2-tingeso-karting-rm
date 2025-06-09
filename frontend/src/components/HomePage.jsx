@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 
 const HomePage = () => {
     return (
-        <div className="container mt-5">
+        <div className="container-fluid mt-5">
             <div className="jumbotron text-center">
                 <h1 className="display-4">¡Bienvenido a Karting RM!</h1>
                 <p className="lead">

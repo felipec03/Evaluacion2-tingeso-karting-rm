@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = '/ms-racksemanal/rack-semanal'; 
+const API_URL = '/api/rack-semanal'; 
 
 class RackSemanalService {
     /**

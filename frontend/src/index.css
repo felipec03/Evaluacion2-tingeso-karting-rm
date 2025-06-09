@@ -24,10 +24,11 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  /* REMOVE display: flex; */
+  /* REMOVE place-items: center; */
+  min-width: 320px; /* This is fine for responsiveness */
+  min-height: 100vh; /* This is fine for full viewport height */
+  /* The background-color and color will likely come from App.css or :root */
 }
 
 h1 {

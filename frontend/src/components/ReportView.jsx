@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ComprobanteForm from './ComprobanteForm';
-import ReporteService from '../services/ReporteService'; // Import the new service
-import { Bar } from 'react-chartjs-2'; // Import Bar chart
+import ReporteService from '../services/ReporteService';
+import { Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -13,7 +13,6 @@ import {
     Legend,
 } from 'chart.js';
 
-// Register Chart.js components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -28,14 +27,20 @@ const ReportView = () => {
     const [activeTab, setActiveTab] = useState('comprobantes');
     const [reservaId, setReservaId] = useState('');
 
-    // State for reports
-    const [reportData, setReportData] = useState(null);
+    const [reportData, setReportData] = useState(null); // This will now store the full ReporteResponseDTO
     const [loadingReport, setLoadingReport] = useState(false);
     const [reportError, setReportError] = useState(null);
-    const [fechaInicio, setFechaInicio] = useState('2023-01-01');
-    const [fechaFin, setFechaFin] = useState(new Date().toISOString().split('T')[0]); // Default to today
-    const [currentReportType, setCurrentReportType] = useState('');
+    
+    // Default to current month for both start and end for a smaller initial query
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    const [fechaInicio, setFechaInicio] = useState(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`);
+    const [fechaFin, setFechaFin] = useState(new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]); // Last day of current month
 
+
+    const [currentReportType, setCurrentReportType] = useState('');
 
     useEffect(() => {
         const urlReservaId = searchParams.get('reservaId');
@@ -52,44 +57,64 @@ const ReportView = () => {
         setCurrentReportType(reportType);
 
         try {
-            let response;
-            if (reportType === 'ingresos-por-tipo-reserva') {
-                response = await ReporteService.getIngresosPorTipoReserva(fechaInicio, fechaFin);
-            } else if (reportType === 'ingresos-por-numero-personas') {
-                response = await ReporteService.getIngresosPorNumeroPersonas(fechaInicio, fechaFin);
+            const startDate = new Date(fechaInicio);
+            const endDate = new Date(fechaFin);
+
+            const anioInicio = startDate.getFullYear();
+            const mesInicio = startDate.getMonth() + 1; // JS months are 0-indexed
+            const anioFin = endDate.getFullYear();
+            const mesFin = endDate.getMonth() + 1;
+
+            if (endDate < startDate) {
+                setReportError("La fecha de fin no puede ser anterior a la fecha de inicio.");
+                setLoadingReport(false);
+                return;
             }
-            setReportData(response.data);
+
+            let response;
+            if (reportType === 'ingresos-por-tarifa') {
+                response = await ReporteService.getIngresosPorTarifa(anioInicio, mesInicio, anioFin, mesFin);
+            } else if (reportType === 'ingresos-por-numero-personas') {
+                response = await ReporteService.getIngresosPorNumeroPersonas(anioInicio, mesInicio, anioFin, mesFin);
+            }
+            setReportData(response.data); // response.data should be ReporteResponseDTO
         } catch (error) {
             console.error(`Error fetching ${reportType}:`, error);
-            setReportError("No se pudo cargar los datos"); // Updated error message
+            let errorMessage = "No se pudo cargar el reporte. ";
+            if (error.response && error.response.data) {
+                if (typeof error.response.data === 'string') {
+                    errorMessage += error.response.data;
+                } else if (error.response.data.message) {
+                    errorMessage += error.response.data.message;
+                } else {
+                     errorMessage += "Verifique los parámetros e intente nuevamente.";
+                }
+            } else {
+                errorMessage += "Error de red o el servidor no responde.";
+            }
+            setReportError(errorMessage);
         } finally {
             setLoadingReport(false);
         }
     };
 
     const getChartData = () => {
-        if (!reportData || reportData.length === 0) {
+        if (!reportData || !reportData.filasReporte || reportData.filasReporte.length === 0) {
             return { labels: [], datasets: [] };
         }
 
-        const allMonths = new Set();
-        reportData.forEach(item => {
-            Object.keys(item.ingresosPorMes).forEach(month => allMonths.add(month));
-        });
-        const sortedMonths = Array.from(allMonths).sort();
+        const labels = reportData.mesesColumnas || []; // Use mesesColumnas from DTO
 
-        const datasets = reportData.map((item, index) => {
+        const datasets = reportData.filasReporte.map((fila, index) => {
             const colors = [
-                'rgba(75, 192, 192, 0.6)',
-                'rgba(255, 99, 132, 0.6)',
-                'rgba(54, 162, 235, 0.6)',
-                'rgba(255, 206, 86, 0.6)',
-                'rgba(153, 102, 255, 0.6)',
-                'rgba(255, 159, 64, 0.6)'
+                'rgba(75, 192, 192, 0.6)', 'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)',
+                'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)',
+                'rgba(255, 99, 71, 0.6)', 'rgba(60, 179, 113, 0.6)'
             ];
             return {
-                label: item.categoria,
-                data: sortedMonths.map(month => item.ingresosPorMes[month] || 0),
+                label: fila.categoria,
+                data: labels.map(mes => fila.ingresosPorMes[mes] || 0),
                 backgroundColor: colors[index % colors.length],
                 borderColor: colors[index % colors.length].replace('0.6', '1'),
                 borderWidth: 1,
@@ -97,10 +122,16 @@ const ReportView = () => {
         });
 
         return {
-            labels: sortedMonths,
+            labels: labels,
             datasets: datasets,
         };
     };
+    
+    const chartTitleText = () => {
+        if (!currentReportType) return "Reporte de Ingresos";
+        const type = currentReportType === 'ingresos-por-tarifa' ? "Ingresos por Tarifa" : "Ingresos por Número de Personas";
+        return `${type}`;
+    }
 
     const chartOptions = {
         responsive: true,
@@ -111,9 +142,10 @@ const ReportView = () => {
             },
             title: {
                 display: true,
-                text: `Reporte de Ingresos: ${currentReportType.replace(/-/g, ' ')}`,
+                text: chartTitleText(),
                 font: {
-                    size: 16
+                    size: 18,
+                    weight: 'bold',
                 }
             },
             tooltip: {
@@ -134,70 +166,69 @@ const ReportView = () => {
         scales: {
             y: {
                 beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'Ingresos (CLP)'
+                },
                 ticks: {
                     callback: function(value) {
                         return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(value);
                     }
                 }
             },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Meses'
+                }
+            }
         },
     };
     
     const renderReportTable = () => {
-        if (!reportData || reportData.length === 0) {
-            return <p className="text-muted">No hay datos para mostrar.</p>;
+        if (!reportData || !reportData.filasReporte || reportData.filasReporte.length === 0) {
+            return <p className="text-muted text-center mt-3">No hay datos para mostrar para el rango seleccionado.</p>;
         }
 
-        const allMonths = new Set();
-        reportData.forEach(item => {
-            Object.keys(item.ingresosPorMes).forEach(month => allMonths.add(month));
-        });
-        const sortedMonths = Array.from(allMonths).sort();
+        const { mesesColumnas, filasReporte, totalesPorMes, granTotal } = reportData;
 
         return (
             <div className="table-responsive mt-4">
-                <table className="table table-striped table-hover table-bordered">
+                <table className="table table-striped table-hover table-bordered caption-top">
+                    <caption>{chartTitleText()}</caption>
                     <thead className="table-dark">
                         <tr>
-                            <th>Categoría</th>
-                            {sortedMonths.map(month => <th key={month} className="text-end">{month}</th>)}
-                            <th className="text-end">Total Categoría</th>
+                            <th scope="col">Categoría</th>
+                            {mesesColumnas.map(month => <th scope="col" key={month} className="text-end">{month}</th>)}
+                            <th scope="col" className="text-end table-info">Total Categoría</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {reportData.map((item, index) => {
-                            const totalCategoria = sortedMonths.reduce((sum, month) => sum + (item.ingresosPorMes[month] || 0), 0);
-                            return (
-                                <tr key={index}>
-                                    <td>{item.categoria}</td>
-                                    {sortedMonths.map(month => (
-                                        <td key={month} className="text-end">
-                                            {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(item.ingresosPorMes[month] || 0)}
-                                        </td>
-                                    ))}
-                                    <td className="text-end fw-bold">
-                                        {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(totalCategoria)}
+                        {filasReporte.map((fila, index) => (
+                            <tr key={index}>
+                                <td className="fw-medium">{fila.categoria}</td>
+                                {mesesColumnas.map(month => (
+                                    <td key={`${fila.categoria}-${month}`} className="text-end">
+                                        {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(fila.ingresosPorMes[month] || 0)}
                                     </td>
-                                </tr>
-                            );
-                        })}
+                                ))}
+                                <td className="text-end fw-bold table-info">
+                                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(fila.totalIngresosCategoria || 0)}
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
-                    <tfoot className="table-light">
-                        <tr>
-                            <th className="fw-bold">Total Mensual</th>
-                            {sortedMonths.map(month => {
-                                const totalMes = reportData.reduce((sum, item) => sum + (item.ingresosPorMes[month] || 0), 0);
-                                return (
-                                    <th key={`total-${month}`} className="text-end fw-bold">
-                                        {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(totalMes)}
-                                    </th>
-                                );
-                            })}
-                            <th className="text-end fw-bolder">
-                                {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(
-                                    reportData.reduce((sum, item) => sum + Object.values(item.ingresosPorMes).reduce((s, v) => s + (v || 0), 0), 0)
-                                )}
-                            </th>
+                    <tfoot className="table-group-divider">
+                        <tr className="table-light fw-bold">
+                            <td>Total Mensual</td>
+                            {mesesColumnas.map(month => (
+                                <td key={`total-${month}`} className="text-end">
+                                    {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(totalesPorMes[month] || 0)}
+                                </td>
+                            ))}
+                            <td className="text-end table-success fw-bolder">
+                                {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(granTotal || 0)}
+                            </td>
                         </tr>
                     </tfoot>
                 </table>
@@ -207,14 +238,14 @@ const ReportView = () => {
 
 
     return (
-        <div className="container mt-4">
-            <h2>Reportes y Documentos</h2>
+        <div className="container-fluid mt-4 mb-5"> {/* Use container-fluid for full width */}
+            <h2 className="mb-4">Reportes y Documentos</h2>
             
             <ul className="nav nav-tabs mb-4">
                 <li className="nav-item">
                     <button 
                         className={`nav-link ${activeTab === 'comprobantes' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('comprobantes'); setReportData(null); setReportError(null);}}
+                        onClick={() => { setActiveTab('comprobantes'); setReportData(null); setReportError(null); setCurrentReportType('');}}
                     >
                         Generación de Comprobantes
                     </button>
@@ -222,7 +253,7 @@ const ReportView = () => {
                 <li className="nav-item">
                     <button 
                         className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('reports'); setReportData(null); setReportError(null);}}
+                        onClick={() => { setActiveTab('reports'); setReportData(null); setReportError(null); setCurrentReportType('');}}
                     >
                         Reportes Estadísticos
                     </button>
@@ -232,12 +263,13 @@ const ReportView = () => {
             {activeTab === 'comprobantes' ? (
                 <ComprobanteForm initialReservaId={reservaId} />
             ) : (
-                <div className="card">
+                <div className="card shadow-sm">
+                    <div className="card-header bg-light py-3">
+                        <h4 className="mb-0">Filtros para Reportes Estadísticos</h4>
+                    </div>
                     <div className="card-body">
-                        <h3>Reportes Estadísticos</h3>
-                        
-                        <div className="row g-3 align-items-end mb-4 p-3 border rounded bg-light">
-                            <div className="col-md-3">
+                        <div className="row g-3 align-items-end mb-4 p-3 border rounded bg-white">
+                            <div className="col-md-3 col-sm-6">
                                 <label htmlFor="fechaInicio" className="form-label">Fecha Inicio:</label>
                                 <input 
                                     type="date" 
@@ -247,7 +279,7 @@ const ReportView = () => {
                                     onChange={(e) => setFechaInicio(e.target.value)} 
                                 />
                             </div>
-                            <div className="col-md-3">
+                            <div className="col-md-3 col-sm-6">
                                 <label htmlFor="fechaFin" className="form-label">Fecha Fin:</label>
                                 <input 
                                     type="date" 
@@ -257,17 +289,17 @@ const ReportView = () => {
                                     onChange={(e) => setFechaFin(e.target.value)} 
                                 />
                             </div>
-                            <div className="col-md-3">
+                            <div className="col-md-3 col-sm-6 mt-3 mt-md-0">
                                 <button 
                                     className="btn btn-primary w-100" 
-                                    onClick={() => handleFetchReport('ingresos-por-tipo-reserva')}
+                                    onClick={() => handleFetchReport('ingresos-por-tarifa')}
                                     disabled={loadingReport}
                                 >
-                                    {loadingReport && currentReportType === 'ingresos-por-tipo-reserva' ? <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> : null}
-                                    Ingresos por Tipo Reserva
+                                    {loadingReport && currentReportType === 'ingresos-por-tarifa' ? <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> : null}
+                                    Ingresos por Tarifa
                                 </button>
                             </div>
-                            <div className="col-md-3">
+                            <div className="col-md-3 col-sm-6 mt-3 mt-md-0">
                                 <button 
                                     className="btn btn-success w-100" 
                                     onClick={() => handleFetchReport('ingresos-por-numero-personas')}
@@ -280,31 +312,36 @@ const ReportView = () => {
                         </div>
 
                         {loadingReport && (
-                            <div className="d-flex justify-content-center my-4">
-                                <div className="spinner-border text-primary" role="status">
+                            <div className="d-flex flex-column align-items-center my-5">
+                                <div className="spinner-border text-primary" style={{width: '3rem', height: '3rem'}} role="status">
                                     <span className="visually-hidden">Cargando reporte...</span>
                                 </div>
-                                <p className="ms-2">Cargando reporte, por favor espere...</p>
+                                <p className="ms-2 mt-2 fs-5">Cargando reporte, por favor espere...</p>
                             </div>
                         )}
                         {reportError && <div className="alert alert-danger mt-3">{reportError}</div>}
                         
                         {reportData && !loadingReport && !reportError && (
                             <>
-                                <div className="mt-4 p-3 border rounded">
-                                    <h4>Gráfico de Ingresos: {currentReportType.replace(/-/g, ' ')}</h4>
-                                    <div style={{ height: '400px', width: '100%' }}>
+                                <div className="mt-4 p-3 border rounded bg-white shadow-sm">
+                                    <h5 className="mb-3">{chartTitleText()} - Gráfico</h5>
+                                    <div style={{ height: '450px', width: '100%' }}>
                                         <Bar data={getChartData()} options={chartOptions} />
                                     </div>
                                 </div>
-                                <div className="mt-4 p-3 border rounded">
-                                     <h4>Tabla de Datos: {currentReportType.replace(/-/g, ' ')}</h4>
+                                <div className="mt-4 p-3 border rounded bg-white shadow-sm">
+                                     <h5 className="mb-3">{chartTitleText()} - Tabla de Datos</h5>
                                     {renderReportTable()}
                                 </div>
                             </>
                         )}
-                         {!reportData && !loadingReport && !reportError && (
-                            <div className="alert alert-info mt-3">
+                         {!reportData && !loadingReport && !reportError && currentReportType && (
+                             <div className="alert alert-warning mt-3 text-center">
+                                No se encontraron datos para el reporte de '{currentReportType.replace(/-/g, ' ')}' con los filtros seleccionados.
+                            </div>
+                         )}
+                         {!reportData && !loadingReport && !reportError && !currentReportType && (
+                            <div className="alert alert-info mt-3 text-center">
                                 Seleccione un rango de fechas y un tipo de reporte para visualizar los datos.
                             </div>
                         )}

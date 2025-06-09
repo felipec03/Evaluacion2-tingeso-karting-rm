@@ -1,24 +1,28 @@
 import axios from 'axios';
 
-// Use a specific environment variable for the report API URL.
-// Fallback to '/api/reportes' if the environment variable is not set.
-const REPORTE_API_BASE_URL = import.meta.env.VITE_REPORTE_API_URL || '/api/reportes';
+const REPORTE_API_BASE_URL = '/api/reportes';
 
 class ReporteService {
-    getIngresosPorTipoReserva(fechaInicio, fechaFin) {
-        return axios.get(`${REPORTE_API_BASE_URL}/ingresos-por-tipo-reserva`, {
+    // Expects anioInicio, mesInicio, anioFin, mesFin as integers
+    getIngresosPorTarifa(anioInicio, mesInicio, anioFin, mesFin) {
+        return axios.get(`${REPORTE_API_BASE_URL}/ingresos-por-tarifa`, {
             params: {
-                fechaInicio,
-                fechaFin
+                anioInicio,
+                mesInicio,
+                anioFin,
+                mesFin
             }
         });
     }
 
-    getIngresosPorNumeroPersonas(fechaInicio, fechaFin) {
-        return axios.get(`${REPORTE_API_BASE_URL}/ingresos-por-numero-personas`, {
+    // Expects anioInicio, mesInicio, anioFin, mesFin as integers
+    getIngresosPorNumeroPersonas(anioInicio, mesInicio, anioFin, mesFin) {
+        return axios.get(`${REPORTE_API_BASE_URL}/ingresos-por-personas`, {
             params: {
-                fechaInicio,
-                fechaFin
+                anioInicio,
+                mesInicio,
+                anioFin,
+                mesFin
             }
         });
     }

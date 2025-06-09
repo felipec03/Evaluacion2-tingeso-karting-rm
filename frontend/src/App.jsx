@@ -19,18 +19,20 @@ function App() {
     <Router>
       <div className="App">
         <Header />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/reservas" element={<ReserveList />} />
-          <Route path="/rack-semanal" element={<RackSemanal />} />
-          <Route path="/agregar-reserva" element={<ReserveForm />} />
-          {/* Removed Pilotos and Karts routes */}
-          {/* <Route path="/pilotos" element={<DriverList />} /> */}
-          {/* <Route path="/karts" element={<KartList />} /> */}
-          <Route path="/reportes" element={<ReportView />} />
-          {/* Add Comprobantes route */}
-          <Route path="/comprobantes" element={<ComprobanteForm />} />
-        </Routes>
+        <main className="container-fluid mt-4 mb-4">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/reservas" element={<ReserveList />} />
+            <Route path="/rack-semanal" element={<RackSemanal />} />
+            <Route path="/agregar-reserva" element={<ReserveForm />} />
+            {/* Removed Pilotos and Karts routes */}
+            {/* <Route path="/pilotos" element={<DriverList />} /> */}
+            {/* <Route path="/karts" element={<KartList />} /> */}
+            <Route path="/reportes" element={<ReportView />} />
+            {/* Add Comprobantes route */}
+            <Route path="/comprobantes" element={<ComprobanteForm />} />
+          </Routes>
+        </main>
       </div>
     </Router>
   );

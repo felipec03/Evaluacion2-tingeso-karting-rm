@@ -17,6 +17,16 @@
     margin-bottom: 16px;
     color: #333;
   }
+
+  /* In RackSemanal.css or App.css */
+  .rbc-non-business-slot {
+    /* Example: Add a subtle pattern or different border */
+    border-top: 1px dashed #ccc;
+  }
+
+  .rbc-non-business-slot:hover {
+      background-color: #e9ecef !important; /* Ensure hover doesn't change color */
+  }
   
   .week-display {
     font-size: 18px;

@@ -40,7 +40,7 @@ spring:
         - id: ms-reportes-vueltas-personas
           uri: lb://ms-reportes-vueltas-personas
           predicates:
-            - Path=/ms-reportes-vueltas-personas/**
+            - Path=/api/reportes/**
       discovery:
         locator:
           enabled: true
