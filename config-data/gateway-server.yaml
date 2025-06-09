@@ -1,3 +1,4 @@
+// filepath: config-data/gateway-server.yaml
 server:
   port: 8085
 
@@ -6,8 +7,8 @@ spring:
     name: gateway-server
   cloud:
     gateway:
-      server: # New parent key
-        webflux: # New parent key
+      server:
+        webflux:
           routes:
             - id: ms-tarifasconfig
               uri: lb://MS-TARIFASCONFIG # Uppercase
@@ -19,45 +20,45 @@ spring:
               uri: lb://MS-DESCUENTOPORPERSONA # Uppercase
               predicates:
                 - Path=/ms-descuentoporpersona/**
-              # No StripPrefix, assuming backend expects /ms-descuentoporpersona/**
+              # No StripPrefix
             - id: ms-descuentosclientefrecuente
               uri: lb://MS-DESCUENTOSCLIENTEFRECUENTE # Uppercase
               predicates:
                 - Path=/ms-descuentosclientefrecuente/**
-              # No StripPrefix, assuming backend expects /ms-descuentosclientefrecuente/**
+              # No StripPrefix
             - id: ms-tarifadiaespecial
               uri: lb://MS-TARIFADIAESPECIAL # Uppercase
               predicates:
                 - Path=/ms-tarifadiaespecial/**
-              # No StripPrefix, assuming backend expects /ms-tarifadiaespecial/**
-            - id: ms-registroreserva-comprobantepago
+              # No StripPrefix
+            - id: ms-registroreserva-comprobantepago # Keep this explicit route
               uri: lb://MS-REGISTRORESERVA-COMPROBANTEPAGO # Uppercase
               predicates:
-                - Path=/registroreserva-comprobantepago/** # Assuming backend expects this full path
-                - Path=/api/reservas/**                  # This should match the incoming request
-                - Path=/api/comprobantes/**              # Assuming backend expects this full path
-              # NO StripPrefix filter here, as your ReservaController expects /api/reservas
+                - Path=/registroreserva-comprobantepago/**
+                - Path=/api/reservas/**                  # This is the one we're testing
+                - Path=/api/comprobantes/**
+              # NO StripPrefix filter here
             - id: ms-racksemanal
               uri: lb://MS-RACKSEMANAL # Uppercase
               predicates:
                 - Path=/ms-racksemanal/**
-              # No StripPrefix, assuming backend expects /ms-racksemanal/**
+              # No StripPrefix
             - id: ms-reportes-vueltas-personas
               uri: lb://MS-REPORTES-VUELTAS-PERSONAS # Uppercase
               predicates:
                 - Path=/ms-reportes-vueltas-personas/**
-              # No StripPrefix, assuming backend expects /ms-reportes-vueltas-personas/**
+              # No StripPrefix
           discovery:
             locator:
-              enabled: true
-              lower-case-service-id: true # For discovery-based routes, not explicit lb://
+              enabled: false # <<<<<< TEMPORARILY DISABLE THIS
+              # lower-case-service-id: true # Does not matter if locator is disabled
 
-# Logging configuration for detailed gateway routing information
+# Logging configuration
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
-    reactor.netty.http.client: DEBUG # For HTTP client interactions from the gateway
-    org.springframework.boot.autoconfigure.web.reactive.error: DEBUG # For error handling details
+    reactor.netty.http.client: DEBUG
+    org.springframework.boot.autoconfigure.web.reactive.error: DEBUG
 
 eureka:
   instance:
@@ -73,10 +74,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*" # Exposes common actuators like health, info
+        include: "*" # Adjusted for correct structure
   endpoint:
     health:
       show-details: always
-    # gateway: # 'enabled: true' was removed as it's no longer supported.
-      # If you need to configure the /actuator/gateway endpoint,
-      # use 'management.endpoint.gateway.access' with appropriate values.
