@@ -35,6 +35,8 @@ spring:
           uri: lb://ms-registroreserva-comprobantepago
           predicates:
             - Path=/registroreserva-comprobantepago/**
+            - Path=/api/reservas/**
+            - Path=/api/comprobantes/**
           filters:
             - StripPrefix=1
         - id: ms-racksemanal

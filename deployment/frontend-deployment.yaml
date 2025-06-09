@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: felipec03/frontend:latest # Replace with your Docker Hub username if different
+        ports:
+        - containerPort: 80 # Nginx listens on port 80 inside the container
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 80 # Port the service will be available on within the cluster
+      targetPort: 80 # Port on the frontend container (Nginx)
+  type: LoadBalancer # Use LoadBalancer for Minikube (requires `minikube tunnel`) or NodePort
