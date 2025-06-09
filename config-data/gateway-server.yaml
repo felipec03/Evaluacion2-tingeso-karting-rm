@@ -25,10 +25,14 @@ spring:
           uri: lb://ms-tarifadiaespecial
           predicates:
             - Path=/ms-tarifadiaespecial/**
-        - id: ms-registroreserva-comprobantepago
+        - id: ms-registroreserva
           uri: lb://ms-registroreserva-comprobantepago
           predicates:
-            - Path=/ms-registroreserva-comprobantepago/**
+            - Path=/api/reservas/**
+        - id: ms-comprobantepago
+          uri: lb://ms-registroreserva-comprobantepago
+          predicates:
+            - Path=/api/comprobantes/**
         - id: ms-racksemanal
           uri: lb://ms-racksemanal
           predicates:
