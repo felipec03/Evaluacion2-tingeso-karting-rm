@@ -1,37 +1,59 @@
-// ...existing code...
 import React, { useState, useEffect, useCallback } from 'react';
 import RackSemanalService from '../services/RackSemanalService';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
-import 'moment/locale/es';
+import 'moment/locale/es'; // Spanish locale for moment
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useNavigate } from 'react-router-dom';
-// import './RackSemanal.css'; // Ensure this is imported if you have custom styles for the component or .rbc-non-business-slot
+import { Modal, Button, ListGroup, Badge, Spinner, Alert } from 'react-bootstrap';
+import './RackSemanal.css'; // Make sure to create and link this CSS file
 
 moment.locale('es');
 const localizer = momentLocalizer(moment);
 
 // Define min and max times for the calendar view
 const minCalendarTime = new Date();
-minCalendarTime.setHours(10, 0, 0, 0); // Earliest start time (10:00 AM)
+minCalendarTime.setHours(10, 0, 0, 0); // Calendar starts at 10:00 AM
 
 const maxCalendarTime = new Date();
-maxCalendarTime.setHours(22, 0, 0, 0); // Latest end time (22:00 PM)
+maxCalendarTime.setHours(22, 0, 0, 0); // Calendar ends at 10:00 PM
 
+// Define 24-hour formats for the calendar
+const calendarFormats = {
+  timeGutterFormat: 'HH:mm',
+  eventTimeRangeFormat: ({ start, end }, culture, local) =>
+    local.format(start, 'HH:mm', culture) + ' - ' + local.format(end, 'HH:mm', culture),
+  agendaTimeRangeFormat: ({ start, end }, culture, local) =>
+    local.format(start, 'HH:mm', culture) + ' - ' + local.format(end, 'HH:mm', culture),
+  selectRangeFormat: ({ start, end }, culture, local) =>
+    local.format(start, 'HH:mm', culture) + ' - ' + local.format(end, 'HH:mm', culture),
+  dayFormat: 'ddd D/M',
+  dayHeaderFormat: (date, culture, local) => local.format(date, 'dddd D MMMM', culture),
+  dayRangeHeaderFormat: ({ start, end }, culture, local) =>
+    local.format(start, 'D MMM', culture) + ' - ' + local.format(end, 'D MMM YYYY', culture),
+};
 
 const RackSemanal = () => {
   const [reservas, setReservas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentDate, setCurrentDate] = useState(moment());
-  const [currentView, setCurrentView] = useState('week');
+  const [currentDate, setCurrentDate] = useState(moment()); // For calendar navigation state
+  const [currentView, setCurrentView] = useState('week'); // Default view
+
   const navigate = useNavigate();
 
+  // State for the reservation detail modal
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedReservaDetail, setSelectedReservaDetail] = useState(null);
+
+  // State for the "Out of Business Hours" modal
+  const [showOutOfHoursModal, setShowOutOfHoursModal] = useState(false);
+  const [outOfHoursMessage, setOutOfHoursMessage] = useState({ title: '', body: [] });
+
   const formatTipoReservaText = (tipoReserva) => {
-// ...existing code...
-    if (tipoReserva === 1) return "10 vueltas";
-    if (tipoReserva === 2) return "15 vueltas";
-    if (tipoReserva === 3) return "20 vueltas";
+    if (tipoReserva === 1) return "Normal (10 vueltas)";
+    if (tipoReserva === 2) return "Extendida (15 vueltas)";
+    if (tipoReserva === 3) return "Premium (20 vueltas)";
     return `Tipo ${tipoReserva}`;
   };
 
@@ -54,16 +76,17 @@ const RackSemanal = () => {
             const startTime = moment(reserva.fechaHora);
             const endTime = moment(reserva.fechaHora).add(reserva.duracionMinutos, 'minutes');
             
-            let title = `${reserva.nombreUsuario || reserva.emailUsuario || 'Cliente Desconocido'}`;
-            title += ` (${reserva.cantidadPersonas || 0}p)`;
-            title += ` - ${formatTipoReservaText(reserva.tipoReserva)}`;
+            let titleParts = [];
+            titleParts.push(reserva.nombreUsuario || reserva.emailUsuario || 'Cliente');
+            titleParts.push(`(${reserva.cantidadPersonas || 0}p)`);
+            titleParts.push(formatTipoReservaText(reserva.tipoReserva).split(' ')[0]);
             if (reserva.cantidadCumple && reserva.cantidadCumple > 0) {
-              title += ` (Cumple: ${reserva.cantidadCumple})`;
+              titleParts.push(`(🎂 ${reserva.cantidadCumple})`);
             }
             
             return {
               id: reserva.id,
-              title: title,
+              title: titleParts.join(' '),
               start: startTime.toDate(),
               end: endTime.toDate(),
               allDay: false,
@@ -72,21 +95,13 @@ const RackSemanal = () => {
           });
           setReservas(calendarEvents);
         } else {
-          console.error('Error: La respuesta de la API no es un array:', response.data);
           setError('Error: Los datos recibidos del servidor no tienen el formato esperado.');
           setReservas([]); 
         }
       } catch (err) {
-        console.error('Error al cargar las reservas:', err);
         let errorMessage = 'Error al cargar las reservas. Por favor, intente nuevamente.';
         if (err.response && err.response.data) {
-            if (typeof err.response.data === 'string') {
-                errorMessage = err.response.data;
-            } else if (err.response.data.message) {
-                errorMessage = err.response.data.message;
-            } else {
-                errorMessage = JSON.stringify(err.response.data);
-            }
+            errorMessage = typeof err.response.data === 'string' ? err.response.data : (err.response.data.message || JSON.stringify(err.response.data));
         } else if (err.message) {
             errorMessage = err.message;
         }
@@ -101,69 +116,62 @@ const RackSemanal = () => {
   }, []);
 
   const handleSelectEvent = useCallback((event) => {
-    const reserva = event.resource;
-    let details = `Reserva ID: ${reserva.id}\n`;
-    details += `Cliente: ${reserva.nombreUsuario || 'N/A'} (${reserva.emailUsuario || 'N/A'})\n`;
-    details += `Teléfono: ${reserva.telefonoUsuario || 'N/A'}\n`;
-    details += `RUT: ${reserva.rutUsuario || 'N/A'}\n`;
-    details += `Fecha y Hora: ${moment(reserva.fechaHora).format('DD/MM/YYYY HH:mm')}\n`;
-    details += `Duración: ${reserva.duracionMinutos} minutos\n`;
-    details += `Tipo: ${formatTipoReservaText(reserva.tipoReserva)}\n`;
-    details += `Personas: ${reserva.cantidadPersonas}\n`;
-    if (reserva.cantidadCumple > 0) {
-      details += `Cumpleaños: ${reserva.cantidadCumple}\n`;
-    }
-    details += `Estado: ${reserva.estadoReserva}\n`;
-    details += `Monto Final: $${reserva.montoFinal != null ? reserva.montoFinal.toFixed(0) : 'N/A'}\n`;
-    alert(details);
+    setSelectedReservaDetail(event.resource); // Store the full reservation object
+    setShowDetailModal(true);
   }, []);
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedReservaDetail(null);
+  };
+
+  const handleCloseOutOfHoursModal = () => {
+    setShowOutOfHoursModal(false);
+  };
 
   const handleSelectSlot = useCallback(({ start }) => {
     const selectedMoment = moment(start);
-    const dayOfWeek = selectedMoment.day(); // 0 (Sunday) to 6 (Saturday)
+    const dayOfWeek = selectedMoment.day(); 
     const hour = selectedMoment.hour();
-    const minute = selectedMoment.minute(); // To ensure we check the start of the hour
+    const minute = selectedMoment.minute(); 
 
-    // For simplicity, "Festives" are treated like weekends.
-    // A more robust solution would involve a list/API of holidays.
     const isWeekendOrFestive = dayOfWeek === 0 || dayOfWeek === 6; 
-
     let isValidSlot = false;
-    let alertMessage = 'La hora seleccionada está fuera del horario de atención.\n\nHorarios:\nLunes a Viernes: 14:00 - 22:00\nSábados, Domingos y Festivos: 10:00 - 22:00';
+    
+    // Define the message for the modal
+    const alertTitle = "Horario No Disponible";
+    const alertBodyLines = [
+        "La hora seleccionada está fuera de nuestro horario de atención.",
+        "",
+        "Nuestros Horarios:",
+        "Lunes a Viernes: 14:00 - 22:00",
+        "Sábados, Domingos y Festivos: 10:00 - 22:00"
+    ];
 
-    if (isWeekendOrFestive) { // Saturday, Sunday, Festives
-      if (hour >= 10 && (hour < 22 || (hour === 22 && minute === 0))) { // Allow up to 22:00 start
+    if (isWeekendOrFestive) { 
+      if (hour >= 10 && (hour < 22 || (hour === 22 && minute === 0))) { 
         isValidSlot = true;
       }
-    } else { // Monday to Friday
-      if (hour >= 14 && (hour < 22 || (hour === 22 && minute === 0))) { // Allow up to 22:00 start
+    } else { 
+      if (hour >= 14 && (hour < 22 || (hour === 22 && minute === 0))) { 
         isValidSlot = true;
       }
     }
     
-    // Also check if the slot is before the overall calendar min time (10:00)
-    // or after the overall calendar max time (22:00)
-    // This is a secondary check as slotPropGetter should visually indicate this.
     if (selectedMoment.hour() < moment(minCalendarTime).hour() || selectedMoment.hour() >= moment(maxCalendarTime).hour()) {
-        // If the slot itself is outside the 10-22 range, it's definitely invalid.
-        // This case should ideally be covered by the specific day logic too.
-        if (selectedMoment.hour() < 10 && isWeekendOrFestive) {
-             // valid if it's weekend and 10 or more
-        } else if (selectedMoment.hour() < 14 && !isWeekendOrFestive) {
-            // valid if it's weekday and 14 or more
-        }
-        else {
-            // isValidSlot = false; // Redundant if already handled, but good for clarity
+        if (!((isWeekendOrFestive && selectedMoment.hour() >= 10) || (!isWeekendOrFestive && selectedMoment.hour() >= 14)) || selectedMoment.hour() >= 22 ) {
+            isValidSlot = false; 
         }
     }
-
 
     if (isValidSlot) {
       const selectedDate = selectedMoment.format('YYYY-MM-DD');
       const selectedTime = selectedMoment.format('HH:mm');
       navigate(`/agregar-reserva?date=${selectedDate}&time=${selectedTime}`);
     } else {
-      alert(alertMessage);
+      // Show the custom modal instead of alert
+      setOutOfHoursMessage({ title: alertTitle, body: alertBodyLines });
+      setShowOutOfHoursModal(true);
     }
   }, [navigate]);
 
@@ -175,83 +183,58 @@ const RackSemanal = () => {
     setCurrentView(newView);
   };
 
-  const goToBack = () => setCurrentDate(moment(currentDate).subtract(1, currentView === 'month' ? 'month' : 'week'));
-  const goToNext = () => setCurrentDate(moment(currentDate).add(1, currentView === 'month' ? 'month' : 'week'));
-  const goToCurrent = () => setCurrentDate(moment());
-
   const dayPropGetter = useCallback((date) => {
     if (moment(date).isSame(moment(), 'day')) {
-      return {
-        className: 'rbc-today', 
-        style: {
-          backgroundColor: '#eaf6ff', 
-        },
-      };
+      return { className: 'rbc-today' };
     }
     return {};
   }, []);
 
   const slotPropGetter = useCallback((date) => {
     const currentMoment = moment(date);
-    const dayOfWeek = currentMoment.day(); // 0 (Sunday) to 6 (Saturday)
+    const dayOfWeek = currentMoment.day(); 
     const hour = currentMoment.hour();
-
     const isWeekendOrFestive = dayOfWeek === 0 || dayOfWeek === 6;
     let isOutsideBusinessHours = false;
 
-    if (isWeekendOrFestive) { // Saturday, Sunday, Festives
-      if (hour < 10 || hour >= 22) { // Slots before 10 AM or at/after 10 PM
+    if (isWeekendOrFestive) { 
+      if (hour < 10 || hour >= 22) { 
         isOutsideBusinessHours = true;
       }
-    } else { // Monday to Friday
-      if (hour < 14 || hour >= 22) { // Slots before 2 PM or at/after 10 PM
+    } else { 
+      if (hour < 14 || hour >= 22) { 
         isOutsideBusinessHours = true;
       }
     }
 
     if (isOutsideBusinessHours) {
-      return {
-        style: {
-          backgroundColor: '#e9ecef', // A light gray, Bootstrap's 'light' background
-          cursor: 'not-allowed',
-        },
-        className: 'rbc-non-business-slot', // For further CSS customization if needed
-      };
+      return { className: 'rbc-non-business-slot' };
     }
     return {};
   }, []);
   
-  const displayDateRange = () => {
-    if (currentView === 'month') {
-      return currentDate.format('MMMM YYYY');
-    }
-    if (currentView === 'week' || currentView === 'day') {
-      const startRange = moment(currentDate).startOf(currentView === 'week' ? 'week' : 'day');
-      const endRange = moment(currentDate).endOf(currentView === 'week' ? 'week' : 'day');
-      if (currentView === 'day') {
-        return startRange.format('dddd, D MMMM YYYY');
-      }
-      return `Semana del ${startRange.format('D MMM')} al ${endRange.format('D MMM, YYYY')}`;
-    }
-    return currentDate.format('D MMMM YYYY'); // For agenda or other views
-  };
-
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '300px', fontSize: '18px' }}>Cargando reservas...</div>;
-  if (error) return <div style={{ color: 'red', textAlign: 'center', padding: '20px', fontSize: '18px' }}>Error: {error}</div>;
+  if (loading) {
+    return (
+        <div className="loading-container">
+            <Spinner animation="border" variant="primary" style={{ width: '3rem', height: '3rem' }} />
+            <span className="ms-3 fs-5">Cargando reservas...</span>
+        </div>
+    );
+  }
+  if (error) {
+    return (
+        <Alert variant="danger" className="text-center m-4">
+            <h4>Error al Cargar Reservas</h4>
+            <p>{error}</p>
+        </Alert>
+    );
+  }
   
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-        <div className="btn-group" role="group" aria-label="Navegación de fecha">
-          <button onClick={goToCurrent} className="btn btn-primary">Hoy</button>
-          <button onClick={goToBack} className="btn btn-outline-secondary">‹ Anterior</button>
-          <button onClick={goToNext} className="btn btn-outline-secondary">Siguiente ›</button>
-        </div>
-        <h3 style={{ margin: 0, textAlign: 'center', flexGrow: 1 }}>{displayDateRange()}</h3>
-      </div>
-      
-      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Calendario de Reservas</h2>
-      <div style={{ height: '75vh' }}>
+    <div className="container-fluid mt-4 rack-semanal-container">
+      <h2 className="text-center mb-4">Rack Semanal de Reservas</h2>
+      <div className="calendar-wrapper">
+        {/* Calendar component remains the same */}
         <Calendar
           localizer={localizer}
           events={reservas}
@@ -267,22 +250,24 @@ const RackSemanal = () => {
           onSelectSlot={handleSelectSlot} 
           onSelectEvent={handleSelectEvent}
           dayPropGetter={dayPropGetter} 
-          slotPropGetter={slotPropGetter} // Added slotPropGetter
-          min={minCalendarTime} // Set minimum time for the calendar view
-          max={maxCalendarTime} // Set maximum time for the calendar view
+          slotPropGetter={slotPropGetter} 
+          min={minCalendarTime} 
+          max={maxCalendarTime} 
+          formats={calendarFormats}
+          step={30}
+          timeslots={1}
           messages={{
             allDay: 'Todo el día',
-            previous: 'Anterior',
-            next: 'Siguiente',
+            previous: '‹',
+            next: '›',
             today: 'Hoy',
             month: 'Mes',
             week: 'Semana',
-// ...existing code...
             day: 'Día',
             agenda: 'Agenda',
             date: 'Fecha',
             time: 'Hora',
-            event: 'Evento (Reserva)',
+            event: 'Reserva',
             noEventsInRange: 'No hay reservas en este rango.',
             showMore: total => `+ Ver ${total} más`,
           }}
@@ -290,23 +275,103 @@ const RackSemanal = () => {
             let newStyle = {
               backgroundColor: "#3174ad", 
               color: "white",
-              borderRadius: "5px",
-              border: "none"
+              borderRadius: "4px",
+              border: "none",
+              padding: "8px 8px",
+              fontSize: "0.875em", 
+              lineHeight: "1.4", 
             };
-            if (event.resource.tipoReserva === 1) { 
-              newStyle.backgroundColor = "#5cb85c"; 
-            } else if (event.resource.tipoReserva === 2) { 
-              newStyle.backgroundColor = "#f0ad4e"; 
-            } else if (event.resource.tipoReserva === 3) { 
-              newStyle.backgroundColor = "#d9534f"; 
+            if (event.resource.tipoReserva === 1) newStyle.backgroundColor = "#5cb85c";
+            else if (event.resource.tipoReserva === 2) newStyle.backgroundColor = "#f0ad4e";
+            else if (event.resource.tipoReserva === 3) newStyle.backgroundColor = "#d9534f";
+            return { style: newStyle };
+          }}
+          components={{
+            toolbar: (toolbar) => {
+              const goToBack = () => toolbar.onNavigate('PREV');
+              const goToNext = () => toolbar.onNavigate('NEXT');
+              const goToCurrent = () => toolbar.onNavigate('TODAY');
+              const goToView = (view) => toolbar.onView(view);
+
+              return (
+                <div className="rbc-toolbar custom-toolbar">
+                  <span className="rbc-btn-group">
+                    <Button variant="outline-secondary" size="sm" onClick={goToCurrent}>Hoy</Button>
+                    <Button variant="outline-secondary" size="sm" onClick={goToBack}>‹ Anterior</Button>
+                    <Button variant="outline-secondary" size="sm" onClick={goToNext}>Siguiente ›</Button>
+                  </span>
+                  <span className="rbc-toolbar-label">{toolbar.label}</span>
+                  <span className="rbc-btn-group">
+                    {toolbar.views.includes('month') && <Button variant={toolbar.view === 'month' ? 'primary' : 'outline-primary'} size="sm" onClick={() => goToView('month')}>Mes</Button>}
+                    {toolbar.views.includes('week') && <Button variant={toolbar.view === 'week' ? 'primary' : 'outline-primary'} size="sm" onClick={() => goToView('week')}>Semana</Button>}
+                    {toolbar.views.includes('day') && <Button variant={toolbar.view === 'day' ? 'primary' : 'outline-primary'} size="sm" onClick={() => goToView('day')}>Día</Button>}
+                    {toolbar.views.includes('agenda') && <Button variant={toolbar.view === 'agenda' ? 'primary' : 'outline-primary'} size="sm" onClick={() => goToView('agenda')}>Agenda</Button>}
+                  </span>
+                </div>
+              );
             }
-            return {
-              className: "",
-              style: newStyle
-            };
           }}
         />
       </div>
+
+      {/* Reservation Detail Modal (existing) */}
+      {selectedReservaDetail && (
+        <Modal show={showDetailModal} onHide={handleCloseDetailModal} centered size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>
+              Detalles de la Reserva <Badge bg="primary">ID: {selectedReservaDetail.id}</Badge>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <ListGroup variant="flush">
+              <ListGroup.Item><strong>Cliente:</strong> {selectedReservaDetail.nombreUsuario || 'N/A'}</ListGroup.Item>
+              <ListGroup.Item><strong>Email:</strong> {selectedReservaDetail.emailUsuario || 'N/A'}</ListGroup.Item>
+              <ListGroup.Item><strong>Teléfono:</strong> {selectedReservaDetail.telefonoUsuario || 'N/A'}</ListGroup.Item>
+              <ListGroup.Item><strong>RUT:</strong> {selectedReservaDetail.rutUsuario || 'N/A'}</ListGroup.Item>
+              <ListGroup.Item><strong>Fecha y Hora:</strong> {moment(selectedReservaDetail.fechaHora).format('DD/MM/YYYY HH:mm')}</ListGroup.Item>
+              <ListGroup.Item><strong>Duración:</strong> {selectedReservaDetail.duracionMinutos} minutos</ListGroup.Item>
+              <ListGroup.Item><strong>Tipo de Reserva:</strong> {formatTipoReservaText(selectedReservaDetail.tipoReserva)}</ListGroup.Item>
+              <ListGroup.Item><strong>Cantidad de Personas:</strong> {selectedReservaDetail.cantidadPersonas}</ListGroup.Item>
+              {selectedReservaDetail.cantidadCumple > 0 && (
+                <ListGroup.Item><strong>Personas en Cumpleaños:</strong> {selectedReservaDetail.cantidadCumple}</ListGroup.Item>
+              )}
+              <ListGroup.Item>
+                <strong>Estado:</strong> <Badge bg={selectedReservaDetail.estadoReserva === 'CONFIRMADA' ? 'success' : 'warning'}>{selectedReservaDetail.estadoReserva}</Badge>
+              </ListGroup.Item>
+              <ListGroup.Item>
+                <strong>Monto Final:</strong> {selectedReservaDetail.montoFinal != null ? `$${Number(selectedReservaDetail.montoFinal).toLocaleString('es-CL')}` : 'N/A'}
+              </ListGroup.Item>
+            </ListGroup>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="outline-secondary" onClick={handleCloseDetailModal}>
+              Cerrar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
+
+      {/* Out of Business Hours Modal (New) */}
+      <Modal show={showOutOfHoursModal} onHide={handleCloseOutOfHoursModal} centered>
+        <Modal.Header closeButton className="bg-warning text-dark">
+          <Modal.Title>
+            <i className="bi bi-exclamation-triangle-fill me-2"></i>
+            {outOfHoursMessage.title}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {outOfHoursMessage.body.map((line, index) => (
+            <p key={index} className={index === 2 ? "mt-3 mb-1 fw-bold" : "mb-1"}>
+              {line}
+            </p>
+          ))}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="primary" onClick={handleCloseOutOfHoursModal}>
+            Entendido
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 };
