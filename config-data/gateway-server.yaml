@@ -36,7 +36,7 @@ spring:
         - id: ms-racksemanal
           uri: lb://ms-racksemanal
           predicates:
-            - Path=/ms-racksemanal/**
+            - Path=/api/rack-semanal/**
         - id: ms-reportes-vueltas-personas
           uri: lb://ms-reportes-vueltas-personas
           predicates:

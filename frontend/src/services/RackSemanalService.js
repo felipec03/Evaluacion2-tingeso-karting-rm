@@ -4,35 +4,16 @@ const API_URL = '/ms-racksemanal/rack-semanal';
 
 class RackSemanalService {
     /**
-     * Inicializa el rack semanal en el backend.
+     * Obtiene todas las reservas activas a través de ms-racksemanal.
+     * Retorna: Promise<AxiosResponse<Array<Reserva>>>
+     * Donde Reserva es el modelo que coincide con la ReservaEntity del backend.
      */
-    inicializarRack() {
-        return axios.post(`${API_URL}/inicializar`);
+    obtenerTodasLasReservas() {
+        return axios.get(`${API_URL}/reservas`);
     }
 
-    /**
-     * Actualiza el rack semanal con las reservas existentes.
-     */
-    actualizarRack() {
-        return axios.post(`${API_URL}/actualizar`);
-    }
-
-    /**
-     * Obtiene la matriz completa del rack semanal.
-     * Retorna: Map<String, Map<String, {reservado: boolean, reservaId: number | null}>>
-     */
-    obtenerMatrizRack() {
-        return axios.get(`${API_URL}/matriz`);
-    }
-
-    /**
-     * Obtiene detalles de una reserva por su ID.
-     * @param {number} reservaId
-     * Retorna: Reserva (model from ms-racksemanal)
-     */
-    obtenerDetallesReserva(reservaId) {
-        return axios.get(`${API_URL}/detalles-reserva/${reservaId}`);
-    }
+    // Removed: inicializarRack, actualizarRack, obtenerMatrizRack, obtenerDetallesReserva
+    // as these functionalities are no longer part of the simplified ms-racksemanal backend.
 }
 
 export default new RackSemanalService();

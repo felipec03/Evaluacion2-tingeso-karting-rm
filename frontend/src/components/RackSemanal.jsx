@@ -1,4 +1,3 @@
-iería Civil Informática\Séptimo Semestre\Técnicas de Ingeniería de Software\Evaluaciones\Evaluacion2-tingeso-karting-rm\frontend\src\components\RackSemanal.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import RackSemanalService from '../services/RackSemanalService';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
@@ -29,39 +28,54 @@ const RackSemanal = () => {
         setError(null);
         const response = await RackSemanalService.obtenerTodasLasReservas();
         
-        const validReservations = response.data.filter(
-          reserva => reserva.estadoReserva && 
-                     reserva.estadoReserva.toUpperCase() !== 'CANCELADA' &&
-                     reserva.fechaHora && // Ensure fechaHora is present
-                     typeof reserva.duracionMinutos === 'number' // Ensure duracionMinutos is a number
-        );
+        // Check if response.data is an array
+        if (Array.isArray(response.data)) {
+          const validReservations = response.data.filter(
+            reserva => reserva.estadoReserva && 
+                       reserva.estadoReserva.toUpperCase() !== 'CANCELADA' &&
+                       reserva.fechaHora && 
+                       typeof reserva.duracionMinutos === 'number'
+          );
 
-        const calendarEvents = validReservations.map(reserva => {
-          const startTime = moment(reserva.fechaHora);
-          const endTime = moment(reserva.fechaHora).add(reserva.duracionMinutos, 'minutes');
-          
-          let title = `${reserva.nombreUsuario || reserva.emailUsuario || 'Cliente Desconocido'}`;
-          title += ` (${reserva.cantidadPersonas || 0}p)`;
-          title += ` - ${formatTipoReservaText(reserva.tipoReserva)}`;
-          if (reserva.cantidadCumple && reserva.cantidadCumple > 0) {
-            title += ` (Cumple: ${reserva.cantidadCumple})`;
-          }
-          
-          return {
-            id: reserva.id,
-            title: title,
-            start: startTime.toDate(),
-            end: endTime.toDate(),
-            allDay: false,
-            resource: reserva, // Store original reserva data
-          };
-        });
-        setReservas(calendarEvents);
+          const calendarEvents = validReservations.map(reserva => {
+            const startTime = moment(reserva.fechaHora);
+            const endTime = moment(reserva.fechaHora).add(reserva.duracionMinutos, 'minutes');
+            
+            let title = `${reserva.nombreUsuario || reserva.emailUsuario || 'Cliente Desconocido'}`;
+            title += ` (${reserva.cantidadPersonas || 0}p)`;
+            title += ` - ${formatTipoReservaText(reserva.tipoReserva)}`;
+            if (reserva.cantidadCumple && reserva.cantidadCumple > 0) {
+              title += ` (Cumple: ${reserva.cantidadCumple})`;
+            }
+            
+            return {
+              id: reserva.id,
+              title: title,
+              start: startTime.toDate(),
+              end: endTime.toDate(),
+              allDay: false,
+              resource: reserva, // Store original reserva data
+            };
+          });
+          setReservas(calendarEvents);
+        } else {
+          // Handle cases where response.data is not an array
+          console.error('Error: La respuesta de la API no es un array:', response.data);
+          setError('Error: Los datos recibidos del servidor no tienen el formato esperado.');
+          setReservas([]); // Set to empty array to prevent further errors
+        }
       } catch (err) {
         console.error('Error al cargar las reservas:', err);
         let errorMessage = 'Error al cargar las reservas. Por favor, intente nuevamente.';
-        if (err.response && err.response.data && err.response.data.message) {
-            errorMessage = err.response.data.message;
+        if (err.response && err.response.data) {
+            // If the error response has data, try to use its message or stringify it
+            if (typeof err.response.data === 'string') {
+                errorMessage = err.response.data;
+            } else if (err.response.data.message) {
+                errorMessage = err.response.data.message;
+            } else {
+                errorMessage = JSON.stringify(err.response.data);
+            }
         } else if (err.message) {
             errorMessage = err.message;
         }
