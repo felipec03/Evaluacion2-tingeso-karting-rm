@@ -17,40 +17,28 @@ spring:
           uri: lb://ms-descuentoporpersona
           predicates:
             - Path=/ms-descuentoporpersona/**
-          filters:
-            - StripPrefix=1
         - id: ms-descuentosclientefrecuente
           uri: lb://ms-descuentosclientefrecuente
           predicates:
             - Path=/ms-descuentosclientefrecuente/**
-          filters:
-            - StripPrefix=1
         - id: ms-tarifadiaespecial
           uri: lb://ms-tarifadiaespecial
           predicates:
             - Path=/ms-tarifadiaespecial/**
-          filters:
-            - StripPrefix=1
         - id: ms-registroreserva-comprobantepago
           uri: lb://ms-registroreserva-comprobantepago
           predicates:
             - Path=/registroreserva-comprobantepago/**
             - Path=/api/reservas/**
             - Path=/api/comprobantes/**
-          filters:
-            - StripPrefix=1
         - id: ms-racksemanal
           uri: lb://ms-racksemanal
           predicates:
             - Path=/ms-racksemanal/**
-          filters:
-            - StripPrefix=1
         - id: ms-reportes-vueltas-personas
           uri: lb://ms-reportes-vueltas-personas
           predicates:
             - Path=/ms-reportes-vueltas-personas/**
-          filters:
-            - StripPrefix=1 
       discovery:
         locator:
           enabled: true
