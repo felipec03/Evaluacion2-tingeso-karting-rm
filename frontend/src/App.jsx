@@ -13,6 +13,8 @@ import ReserveForm from './components/ReserveForm';
 import ReportView from './components/ReportView';
 import RackSemanal from './components/RackSemanal';
 import ComprobanteForm from './components/ComprobanteForm'; // Import ComprobanteForm
+import NuestraOferta from './components/NuestraOferta'; // Import NuestraOferta component
+
 
 function App() {
   return (
@@ -31,6 +33,8 @@ function App() {
             <Route path="/reportes" element={<ReportView />} />
             {/* Add Comprobantes route */}
             <Route path="/comprobantes" element={<ComprobanteForm />} />
+            <Route path="/nuestra-oferta" element={<NuestraOferta />} />
+
           </Routes>
         </main>
       </div>

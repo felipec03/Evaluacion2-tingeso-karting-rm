@@ -12,6 +12,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/tarifas-dias-especiales")
+@CrossOrigin("*")
 public class TarifaDiaEspecialController {
 
     @Autowired

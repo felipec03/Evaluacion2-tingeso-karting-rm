@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import ComprobanteForm from './ComprobanteForm';
+// Remove ComprobanteForm import if it's no longer directly used here for generation
+// import ComprobanteForm from './ComprobanteForm'; 
+import ComprobanteList from './ComprobanteList'; // Import the new list component
 import ReporteService from '../services/ReporteService';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -24,33 +26,38 @@ ChartJS.register(
 
 const ReportView = () => {
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState('comprobantes');
-    const [reservaId, setReservaId] = useState('');
+    // Default activeTab can be 'listaComprobantes' or 'reports'
+    const [activeTab, setActiveTab] = useState('listaComprobantes'); 
+    // reservaId might not be needed here anymore if ComprobanteForm is separate
+    // const [reservaId, setReservaId] = useState(''); 
 
-    const [reportData, setReportData] = useState(null); // This will now store the full ReporteResponseDTO
+    const [reportData, setReportData] = useState(null);
     const [loadingReport, setLoadingReport] = useState(false);
     const [reportError, setReportError] = useState(null);
     
-    // Default to current month for both start and end for a smaller initial query
     const today = new Date();
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1; // JavaScript months are 0-indexed
+    const currentMonth = today.getMonth() + 1;
     
     const [fechaInicio, setFechaInicio] = useState(`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`);
-    const [fechaFin, setFechaFin] = useState(new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]); // Last day of current month
+    const [fechaFin, setFechaFin] = useState(new Date(currentYear, currentMonth, 0).toISOString().split('T')[0]);
 
 
     const [currentReportType, setCurrentReportType] = useState('');
 
     useEffect(() => {
+        // This logic might change or be removed if 'reservaId' is handled elsewhere
         const urlReservaId = searchParams.get('reservaId');
         if (urlReservaId) {
-            setReservaId(urlReservaId);
-            setActiveTab('comprobantes');
+            // setReservaId(urlReservaId); 
+            // If you want to default to a specific tab when reservaId is present, adjust here.
+            // For now, we'll let the default activeTab take precedence or handle it in ComprobanteForm if it's still used.
+            // setActiveTab('listaComprobantes'); // Or whatever tab is relevant
         }
     }, [searchParams]);
 
     const handleFetchReport = async (reportType) => {
+        // ... (existing code for fetching reports)
         setLoadingReport(true);
         setReportError(null);
         setReportData(null);
@@ -77,7 +84,7 @@ const ReportView = () => {
             } else if (reportType === 'ingresos-por-numero-personas') {
                 response = await ReporteService.getIngresosPorNumeroPersonas(anioInicio, mesInicio, anioFin, mesFin);
             }
-            setReportData(response.data); // response.data should be ReporteResponseDTO
+            setReportData(response.data); 
         } catch (error) {
             console.error(`Error fetching ${reportType}:`, error);
             let errorMessage = "No se pudo cargar el reporte. ";
@@ -99,11 +106,12 @@ const ReportView = () => {
     };
 
     const getChartData = () => {
+        // ... (existing code for chart data)
         if (!reportData || !reportData.filasReporte || reportData.filasReporte.length === 0) {
             return { labels: [], datasets: [] };
         }
 
-        const labels = reportData.mesesColumnas || []; // Use mesesColumnas from DTO
+        const labels = reportData.mesesColumnas || []; 
 
         const datasets = reportData.filasReporte.map((fila, index) => {
             const colors = [
@@ -128,12 +136,14 @@ const ReportView = () => {
     };
     
     const chartTitleText = () => {
+        // ... (existing code for chart title)
         if (!currentReportType) return "Reporte de Ingresos";
         const type = currentReportType === 'ingresos-por-tarifa' ? "Ingresos por Tarifa" : "Ingresos por Número de Personas";
         return `${type}`;
     }
 
     const chartOptions = {
+        // ... (existing chart options)
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
@@ -186,6 +196,7 @@ const ReportView = () => {
     };
     
     const renderReportTable = () => {
+        // ... (existing code for rendering report table)
         if (!reportData || !reportData.filasReporte || reportData.filasReporte.length === 0) {
             return <p className="text-muted text-center mt-3">No hay datos para mostrar para el rango seleccionado.</p>;
         }
@@ -238,31 +249,32 @@ const ReportView = () => {
 
 
     return (
-        <div className="container-fluid mt-4 mb-5"> {/* Use container-fluid for full width */}
-            <h2 className="mb-4">Reportes y Documentos</h2>
+        <div className="container-fluid mt-4 mb-5">
+            <h2 className="mb-4">Documentos y Reportes</h2> {/* Updated title */}
             
             <ul className="nav nav-tabs mb-4">
                 <li className="nav-item">
                     <button 
-                        className={`nav-link ${activeTab === 'comprobantes' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('comprobantes'); setReportData(null); setReportError(null); setCurrentReportType('');}}
+                        className={`nav-link ${activeTab === 'listaComprobantes' ? 'active' : ''}`}
+                        onClick={() => { setActiveTab('listaComprobantes'); setReportData(null); setReportError(null); setCurrentReportType('');}}
                     >
-                        Generación de Comprobantes
+                        Listado de Comprobantes
                     </button>
                 </li>
                 <li className="nav-item">
                     <button 
                         className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`}
-                        onClick={() => { setActiveTab('reports'); setReportData(null); setReportError(null); setCurrentReportType('');}}
+                        onClick={() => { setActiveTab('reports'); /* Keep reportData if switching back and forth, or clear if preferred */ }}
                     >
                         Reportes Estadísticos
                     </button>
                 </li>
             </ul>
             
-            {activeTab === 'comprobantes' ? (
-                <ComprobanteForm initialReservaId={reservaId} />
+            {activeTab === 'listaComprobantes' ? (
+                <ComprobanteList /> // Render the new list component
             ) : (
+                // ... (existing code for rendering reports tab)
                 <div className="card shadow-sm">
                     <div className="card-header bg-light py-3">
                         <h4 className="mb-0">Filtros para Reportes Estadísticos</h4>
