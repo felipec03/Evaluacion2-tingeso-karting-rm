@@ -1,4 +1,3 @@
-// filepath: config-data/gateway-server.yaml
 server:
   port: 8085
 
@@ -7,58 +6,41 @@ spring:
     name: gateway-server
   cloud:
     gateway:
-      server:
-        webflux:
-          routes:
-            - id: ms-tarifasconfig
-              uri: lb://MS-TARIFASCONFIG # Uppercase
-              predicates:
-                - Path=/ms-tarifasconfig/**
-              filters:
-                - StripPrefix=1
-            - id: ms-descuentoporpersona
-              uri: lb://MS-DESCUENTOPORPERSONA # Uppercase
-              predicates:
-                - Path=/ms-descuentoporpersona/**
-              # No StripPrefix
-            - id: ms-descuentosclientefrecuente
-              uri: lb://MS-DESCUENTOSCLIENTEFRECUENTE # Uppercase
-              predicates:
-                - Path=/ms-descuentosclientefrecuente/**
-              # No StripPrefix
-            - id: ms-tarifadiaespecial
-              uri: lb://MS-TARIFADIAESPECIAL # Uppercase
-              predicates:
-                - Path=/ms-tarifadiaespecial/**
-              # No StripPrefix
-            - id: ms-registroreserva-comprobantepago # Keep this explicit route
-              uri: lb://MS-REGISTRORESERVA-COMPROBANTEPAGO # Uppercase
-              predicates:
-                - Path=/registroreserva-comprobantepago/**
-                - Path=/api/reservas/**                  # This is the one we're testing
-                - Path=/api/comprobantes/**
-              # NO StripPrefix filter here
-            - id: ms-racksemanal
-              uri: lb://MS-RACKSEMANAL # Uppercase
-              predicates:
-                - Path=/ms-racksemanal/**
-              # No StripPrefix
-            - id: ms-reportes-vueltas-personas
-              uri: lb://MS-REPORTES-VUELTAS-PERSONAS # Uppercase
-              predicates:
-                - Path=/ms-reportes-vueltas-personas/**
-              # No StripPrefix
-          discovery:
-            locator:
-              enabled: false # <<<<<< TEMPORARILY DISABLE THIS
-              # lower-case-service-id: true # Does not matter if locator is disabled
-
-# Logging configuration
-logging:
-  level:
-    org.springframework.cloud.gateway: DEBUG
-    reactor.netty.http.client: DEBUG
-    org.springframework.boot.autoconfigure.web.reactive.error: DEBUG
+      routes:
+        - id: ms-tarifasconfig
+          uri: lb://ms-tarifasconfig
+          predicates:
+            - Path=/ms-tarifasconfig/**
+          filters:
+            - StripPrefix=1
+        - id: ms-descuentoporpersona
+          uri: lb://ms-descuentoporpersona
+          predicates:
+            - Path=/ms-descuentoporpersona/**
+        - id: ms-descuentosclientefrecuente
+          uri: lb://ms-descuentosclientefrecuente
+          predicates:
+            - Path=/ms-descuentosclientefrecuente/**
+        - id: ms-tarifadiaespecial
+          uri: lb://ms-tarifadiaespecial
+          predicates:
+            - Path=/ms-tarifadiaespecial/**
+        - id: ms-registroreserva-comprobantepago
+          uri: lb://ms-registroreserva-comprobantepago
+          predicates:
+            - Path=/ms-registroreserva-comprobantepago/**
+        - id: ms-racksemanal
+          uri: lb://ms-racksemanal
+          predicates:
+            - Path=/ms-racksemanal/**
+        - id: ms-reportes-vueltas-personas
+          uri: lb://ms-reportes-vueltas-personas
+          predicates:
+            - Path=/ms-reportes-vueltas-personas/**
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
 
 eureka:
   instance:
@@ -74,7 +56,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*" # Adjusted for correct structure
+        include: "*"
   endpoint:
     health:
       show-details: always
+    gateway:
+      enabled: true
