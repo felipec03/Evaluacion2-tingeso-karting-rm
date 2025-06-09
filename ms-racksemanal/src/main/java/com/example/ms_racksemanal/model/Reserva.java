@@ -5,21 +5,19 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true) // Important for flexibility with Feign client
 public class Reserva {
+
     private Long id;
     private LocalDateTime fechaHora;
-    private Integer duracionMinutos;
-    private Integer tipoReserva;
-    private Integer cantidadPersonas;
-    private Integer cantidadCumple;
+    private int tipoReserva;
+    private int cantidadPersonas;
+    private int cantidadCumple;
 
     private String nombreUsuario;
     private String rutUsuario;
@@ -32,18 +30,5 @@ public class Reserva {
     private Double montoFinal;
     private String estadoReserva;
 
-    // Helper method for compatibility with existing code
-    public String getEstado() {
-        return estadoReserva;
-    }
-
-    // Helper method if your code expects rutCliente
-    public String getRutCliente() {
-        return rutUsuario;
-    }
-
-    // Helper method if your code expects nombreCliente
-    public String getNombreCliente() {
-        return nombreUsuario;
-    }
+    private Integer duracionMinutos;
 }
